@@ -34,30 +34,19 @@ class FeatureStorage:
         self.pointer = 0
         self.storage = {}
 
-        if 'global' in save_type:
-            global_storage = torch.FloatStorage.from_file(
-                os.path.join(save_dir, f'{desc_name}{split}_global{extension}.pt'),
-                True, dataset_size * global_desc_dim)
-            self.storage['global'] = torch.FloatTensor(global_storage).reshape(dataset_size, global_desc_dim)
-
-        if 'cls' in save_type:
-            global_cls_storage = torch.FloatStorage.from_file(
-                os.path.join(save_dir, f'{desc_name}_cls{split}_global{extension}.pt'),
-                True, dataset_size * global_desc_dim)
-            self.storage['cls'] = torch.FloatTensor(global_cls_storage).reshape(dataset_size, global_desc_dim)
-
-        if 'local' in save_type:
-            self.hdf5_file = h5py.File(os.path.join(save_dir, f'{desc_name}{split}_local{extension}.hdf5'), 'w')
-            self.storage['local'] = self.hdf5_file.create_dataset('features', shape=[dataset_size, topk, local_desc_dim + 5], dtype=np.float32)
+        for desc_type in save_type:
+            hdf5_file = h5py.File(os.path.join(save_dir, f'{desc_name}{split}_{desc_type}{extension}.hdf5'), 'w')
+            shape = [dataset_size, topk, local_desc_dim + 5] if desc_type == 'local' else [dataset_size, global_desc_dim]
+            hdf5_file.create_dataset("features", shape=shape, dtype=np.float32)
+            self.storage[desc_type] = hdf5_file
 
     def __del__(self):
-        if 'local' in self.storage:
-            self.hdf5_file.close()
-
+        for hdf5_file in self.storage.values():
+            hdf5_file.close()
 
     def save(self, feats, save_type):
         if save_type in self.storage:
-            self.storage[save_type][self.pointer:self.pointer + len(feats)] = feats
+            self.storage[save_type]["features"][self.pointer:self.pointer + len(feats)] = feats
 
     def update_pointer(self, size):
         self.pointer += size

@@ -11,21 +11,16 @@ from extract_cvnet import extract as extract_cvnet, load_cvnet
 from image_dataset import read_imlist, DataSet, FeatureStorage
 from spatial_attention_2d import SpatialAttention2d
 
+_BASE_URL = 'http://ptak.felk.cvut.cz/personal/sumapave/public/ames/networks/'
+
 
 def main():
     parser = argparse.ArgumentParser(description='Generate 1M embedding')
-    parser.add_argument('--weight',
-                        help='Path to weight')
-    parser.add_argument('--detector', default='', help='Path to detector')
-
+    parser.add_argument('--pretrained', action='store_true', default=True, help='Load pretrained detector model.')
     parser.add_argument('--save_path', default='data', type=str)
     parser.add_argument('--data_path', type=str)
-    parser.add_argument('--file_name',
-                        help='file name to parse image paths')
-
-
-    parser.add_argument('--dataset',
-                        help='dataset')
+    parser.add_argument('--file_name', help='file name to parse image paths')
+    parser.add_argument('--dataset', help='dataset')
     parser.add_argument('--split', nargs='?', const='', default='', type=str)
     parser.add_argument('--desc_type', default='cls,global,local', type=str)
     parser.add_argument('--backbone', default='dinov2', type=str)
@@ -35,7 +30,7 @@ def main():
 
 
     args = parser.parse_args()
-    dataset, file_name, imsize, topk = args.dataset, args.file_name, args.imsize, args.topk
+    dataset, file_name, imsize, topk, desc_type = args.dataset, args.file_name, args.imsize, args.topk, args.desc_type.split(",")
 
     save_path = f"{args.save_path}/{dataset.lower()}"
     im_paths = read_imlist(os.path.join(save_path, args.file_name))
@@ -50,7 +45,7 @@ def main():
         global_dim = 2048
         local_dim = 1024
         extract_f = extract_cvnet
-        model = load_cvnet(args.weight)
+        model = load_cvnet(f'{_BASE_URL}/CVPR2022_CVNet_R101.pt')
         scale_list = [0.7071, 1.0, 1.4142]
         ps = None
     else:
@@ -59,12 +54,11 @@ def main():
     model.cuda()
     model.eval()
 
-    detector = None
-    if os.path.exists(args.detector):
-        detector = SpatialAttention2d(local_dim)
-        detector.cuda()
-        detector.eval()
-        cpt = torch.load(args.detector)
+    detector = SpatialAttention2d(local_dim)
+    detector.cuda()
+    detector.eval()
+    if args.pretrained:
+        cpt = torch.hub.load_state_dict_from_url(f'{_BASE_URL}/{args.backbone}_detector.pt')
         detector.load_state_dict(cpt['state'], strict=True)
 
     if args.split == '_query' and dataset in ['roxford5k', 'rparis6k', 'instre']:
@@ -87,7 +81,7 @@ def main():
     file_name = '' if file_name[-4:] == '.txt' else '_' + file_name
 
     feature_storage = FeatureStorage(save_path, args.backbone, args.split, file_name, global_dim, local_dim,
-                                     len(dataset), args.desc_type, topk=topk)
+                                     len(dataset), desc_type, topk=topk)
     extract_f(model, detector, feature_storage, dataloader, topk)
 
 

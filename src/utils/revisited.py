@@ -127,7 +127,7 @@ def compute_map(ranks, gnd, kappas=[], ap_f=compute_trapezoidal_ap):
     return map, aps, pr, prs
 
 
-def compute_metrics(query_dataset, gallery_dataset, ranks, gnd, kappas=[1, 5, 10]):
+def compute_metrics(query_dataset, ranks, gnd, kappas=(1, 5, 10)):
     dataset_name = query_dataset.name
 
     if dataset_name == 'gldv2-test':

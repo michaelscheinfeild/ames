@@ -148,7 +148,7 @@ def extract_local_feature(model, detector, test_loader, feature_storage, topk=70
 def load_cvnet(weight_path):
     model = ResNet(101, 2048)
 
-    weight = torch.load(weight_path)
+    weight = torch.hub.load_state_dict_from_url(weight_path)
     weight_new = {}
     for i, j in zip(weight['model_state'].keys(), weight['model_state'].values()):
         weight_new[i.replace('encoder_q.', '')] = j

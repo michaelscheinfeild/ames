@@ -1,0 +1,5 @@
+# @package _global_
+
+desc_name: 'cvnet'
+dim_global_features: 2048
+dim_local_features: 1024

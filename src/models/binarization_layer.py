@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 class BinarizationLayer(nn.Module):
 
-    def __init__(self, file_name=None, dims=None, bits=None, sigma=1e-6, pretrained=False, trainable=False):
+    def __init__(self, file_name=None, dims=None, bits=None, sigma=1e-6, pretrained=None, trainable=False):
         super(BinarizationLayer, self).__init__()
         self.bits = bits
         self.dims = dims
@@ -15,10 +15,9 @@ class BinarizationLayer(nn.Module):
         self.W = None
         if file_name is not None:
             self.load(file_name)
-        elif pretrained:
-            pretrained_url = 'https://mever.iti.gr/distill-and-select/models/itq_resnet50W_dns100k_1M.pth'
-            weights = torch.hub.load_state_dict_from_url(pretrained_url)
-            self.init_params(weights['proj'])
+        elif pretrained is not None:
+            state_dict = torch.hub.load_state_dict_from_url(pretrained, map_location=torch.device('cpu'))
+            self.init_params(state_dict['W'])
         elif dims is not None:
             self.bits = bits if bits is not None else dims
             self.init_params()

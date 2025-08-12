@@ -1,11 +1,11 @@
 defaults:
   - dataset@test_dataset: roxford
+  - descriptors: dinov2
   - model: ames
   - _self_
 
 data_root:
 cpu: False
-resume:
+model_path:
 seed: 0
-num_workers: 8
-desc_name: 'dinov2'
+num_workers: 4

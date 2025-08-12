@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from .binarization_layer import BinarizationLayer
 from .transformer_dec import TransformerDecoder, TransformerDecoderLayer
 
+_BASE_URL = 'http://ptak.felk.cvut.cz/personal/sumapave/public/ames/networks/'
 
 def _init_weights(m):
     if isinstance(m, nn.Conv2d):
@@ -18,15 +19,17 @@ def _init_weights(m):
 
 
 class AMES(nn.Module):
-    def __init__(self, data_root, local_dim, model_dim, nhead, num_encoder_layers, dim_feedforward, activation,
-                 normalize_before, binarized=True):
+    def __init__(self, desc_name, local_dim, model_dim=128, nhead=2,
+                 num_encoder_layers=5, dim_feedforward=1024, activation="relu",
+                 normalize_before=False, binarized=True, pretrained=None):
+
         super(AMES, self).__init__()
         self.binarized = binarized
 
         self.mtc_token = nn.Parameter(torch.rand(model_dim))
         if self.binarized:
             self.remap_local = nn.Sequential(
-                BinarizationLayer(file_name=f'{data_root}/networks/itq_dinov2_D128.npz', trainable=True),
+                BinarizationLayer(pretrained=_BASE_URL + f'itq_{desc_name}_D128.pt', trainable=True),
                 nn.Linear(model_dim, model_dim),
                 nn.LayerNorm(model_dim))
         else:
@@ -37,8 +40,11 @@ class AMES(nn.Module):
         self.decoder = TransformerDecoder(decoder_layer, num_encoder_layers, decoder_norm)
         self.classifier = nn.Linear(model_dim, 1)
 
-        nn.init.trunc_normal_(self.mtc_token, std=.02)
-        self.apply(_init_weights)
+        if pretrained is not None:
+            self.load_state_dict(torch.hub.load_state_dict_from_url(_BASE_URL + pretrained, map_location=torch.device('cpu'))['state'])
+        else:
+            nn.init.trunc_normal_(self.mtc_token, std=.02)
+            self.apply(_init_weights)
 
     def forward(self,
             src_local=None, src_mask=None,
@@ -60,6 +66,9 @@ class AMES(nn.Module):
             tgt_local = tgt_local.half().float()
 
         input_feats = torch.cat([mtc_token, src_local, tgt_local], 1).permute(1, 0, 2)
+
+        src_mask = src_local.new_zeros((B, Q), dtype=torch.bool) if src_mask is None else src_mask
+        tgt_mask = tgt_local.new_zeros((B, T), dtype=torch.bool) if tgt_mask is None else tgt_mask
 
         input_mask = torch.cat([
             src_local.new_zeros((B, 1), dtype=torch.bool),
