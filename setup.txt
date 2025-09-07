@@ -1,0 +1,68 @@
+ רובסטי לסיבוב וסקייל
+-----------------------
+
+PS C:\gitRepo\ames> python --version
+Python 3.12.3
+PS C:\gitRepo\ames> .\venvemes\Scripts\Activate
+
+python3 --version
+
+python3.12 -m venv venvemes
+.\venvemes\Scripts\Activate
+
+
+.\venv\Scripts\Activate
+pip install -r requirements.txt
+
+
+git clone https://github.com/michaelscheinfeild/ames.git
+cd ames
+
+
+
+py -3.12 -m venv venvemes
+.\venvemes\Scripts\Activate
+
+-------------------------
+
+install wget
+install choco
+
+
+
+
+& "C:\ProgramData\chocolatey\bin\wget.exe" -r -nH --cut-dirs=5 --no-parent --reject="index.html*" --reject-regex ".*/gldv2(-test)?/.*" -P data http://ptak.felk.cvut.cz/personal/sumapave/public/ames/data/
+
+
+
+wget -r -nH --cut-dirs=5 --no-parent --reject="index.html*" --reject-regex ".*/gldv2(-test)?/.*" -P data http://ptak.felk.cvut.cz/personal/sumapave/public/ames/data/
+Great question—this snippet is part of a setup guide for evaluating image retrieval models using specific datasets. Let me break it down for you:
+
+🧠 What’s Going On Here?
+This is a dataset preparation and download instruction for evaluating computer vision models—specifically, models that use local descriptors and global similarities to retrieve images similar to a query image.
+
+📦 Datasets Mentioned
+ROxford5k and RParis6k: Popular benchmarks for image retrieval tasks, based on Oxford and Paris landmarks.
+
+GLDv2 test set: A test set from Google Landmarks Dataset v2.
+
+ROP distractors (+1M): A large set of additional images used to make retrieval more challenging.
+
+🧩 What Are Local Descriptors?
+These are compact representations of image regions (like SIFT, SURF, or learned features) used to compare images. You need these descriptors to evaluate how well your model retrieves similar images.
+
+📥 What the wget Command Does
+This command downloads the necessary files for the ROP dataset into a local folder called data. Here's a breakdown of the flags:
+
+Flag	Meaning
+-r	Recursively download files
+-nH	Skip creating a directory named after the host
+--cut-dirs=5	Remove the first 5 directory levels from the URL path when saving locally
+--no-parent	Don't ascend to parent directories
+--reject="index.html*"	Skip downloading index files
+--reject-regex ".*/gldv2(-test)?/.*"	Skip anything related to GLDv2 test set
+-P data	Save everything into the data folder
+So essentially, this command pulls down the ROP dataset files (excluding GLDv2 test data) and places them neatly into your local data directory, ready for use.
+
+If you're working on image retrieval or evaluating visual search models, this setup is laying the groundwork for benchmarking your model against known datasets. Want help visualizing how these descriptors work or how to use them in a model pipeline? I can walk you through that too.
+--------------------------------------
