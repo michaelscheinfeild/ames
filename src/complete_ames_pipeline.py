@@ -14,6 +14,63 @@ from pathlib import Path
 
 # You'll need to import your AMES model class - adjust the import path
 # from src.models.ames import AMES  # Adjust this import based on your code structure
+'''
+The CompletePipeline class is a high-level wrapper that automates the entire AMES image retrieval process, 
+from raw image input to ranked search results. Here’s what each part does:
+
+Initialization (__init__):
+Sets up paths, device (CPU/GPU), and placeholders for models and data (DINOv2, AMES, gallery features, gallery names, ground truth).
+
+load_dinov2:
+Loads the DINOv2 model from torch.hub for feature extraction and sets up the required image preprocessing pipeline.
+
+extract_dinov2_features:
+Given an image path, loads and preprocesses the image, then extracts either local (patch) or global features using DINOv2.
+
+load_ames_model:
+Loads the AMES model, either from a local checkpoint or from torch.hub as a fallback, and moves it to the correct device.
+
+load_gallery_data:
+Loads precomputed gallery features from HDF5, gallery image names from a text file, and ground truth from a pickle file.
+
+compute_similarities:
+For a given query feature, computes similarity scores between the query and all gallery images using the AMES model,
+ processing in batches for efficiency.
+
+get_top_matches:
+Sorts the similarity scores and returns the top-k matches, including their rank, index, score, and image name.
+
+search_image:
+The main pipeline: extracts features from a query image, loads models/data if needed, computes similarities, gets top matches, and prints results.
+
+main (example usage):
+Shows how to use the pipeline: initialize, run a search, and print similarity statistics.
+
+In summary, CompletePipeline encapsulates all steps needed to go from a raw image to a ranked list of similar images in the gallery,
+ using DINOv2 for feature extraction and AMES for similarity computation.
+'''
+
+def inspect_hdf5(filepath):
+    """Inspect HDF5 file structure"""
+    print(f"\n{'='*20} {filepath.name} {'='*20}")
+    
+    with h5py.File(filepath, 'r') as f:
+        print(f"Keys: {list(f.keys())}")
+        
+        for key in f.keys():
+            dataset = f[key]
+            if isinstance(dataset, h5py.Dataset):
+                print(f"\nDataset: {key}")
+                print(f"  Shape: {dataset.shape}")
+                print(f"  Dtype: {dataset.dtype}")
+                print(f"  Size: {dataset.size * dataset.dtype.itemsize / (1024**3):.2f} GB")
+                
+                # Sample some values
+                if len(dataset.shape) == 3:  # [num_images, patches, features]
+                    print(f"  First image shape: {dataset[0].shape}")
+                    print(f"  First patch, first 5 features: {dataset[0, 0, :5]}")
+                elif len(dataset.shape) == 2:  # [num_images, features]
+                    print(f"  First image, first 5 features: {dataset[0, :5]}")
 
 class CompletePipeline:
     def __init__(self, data_root="data", model_path="dinov2_ames.pt"):
@@ -127,22 +184,26 @@ class CompletePipeline:
         
         # Load gallery features
         gallery_hdf5 = gallery_path / "dinov2_gallery_local.hdf5"
+
+        inspect_hdf5(gallery_hdf5)
+
         if gallery_hdf5.exists():
             with h5py.File(gallery_hdf5, 'r') as f:
-                # Inspect the structure first
                 print(f"HDF5 keys: {list(f.keys())}")
-                
-                # Load features - adjust key names based on actual structure
                 if 'features' in f:
-                    self.gallery_features = torch.tensor(f['features'][:])
+                    dset = f['features']
                 elif len(f.keys()) == 1:
                     key = list(f.keys())[0]
-                    self.gallery_features = torch.tensor(f[key][:])
+                    dset = f[key]
                 else:
-                    # Take the first key that looks like features
                     key = list(f.keys())[0]
-                    self.gallery_features = torch.tensor(f[key][:])
-                    
+                    dset = f[key]
+
+                # Extract only the 'descriptor' field: shape (num_images, 700, 768)
+                desc = dset['descriptor'].astype(np.float32)  # (num_images, 700, 768)
+                # Pool (mean) over patches to get (num_images, 768)
+                desc = desc.mean(axis=1)
+                self.gallery_features = torch.tensor(desc)
             print(f"Gallery features shape: {self.gallery_features.shape}")
         else:
             raise FileNotFoundError(f"Gallery features not found: {gallery_hdf5}")
@@ -274,9 +335,15 @@ class CompletePipeline:
 def main():
     """Example usage"""
     # Configuration
-    image_path = r"C:\github\data\roxford5k\roxford5k\jpg\ashmolean_000063.jpg"
-    data_root = r"C:\github\ames\ames\data"
+    image_path = r"C:\github\data\roxford5k\jpg\ashmolean_000063.jpg"
+    #data_root = r"C:\github\data\\"
+    data_root = r"C:\github\ames\ames\data\\"
     model_path = "dinov2_ames.pt"
+
+    #draw image
+
+    #img = Image.open(image_path)
+    #img.show()
     
     # Initialize pipeline
     pipeline = CompletePipeline(data_root=data_root, model_path=model_path)
