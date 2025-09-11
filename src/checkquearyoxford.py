@@ -8,7 +8,52 @@ dinov2_gallery_local.hdf5 → local descriptors for the database/gallery
 nn_dinov2.pkl → precomputed nearest neighbors
 gnd_roxford5k.pkl → ground-truth info (which images are correct matches)
 test_query.txt, test_gallery.txt → list of image IDs
+
+
+1) Imports and Utility Functions
+
+Imports h5py, numpy, and os for file and array operations.
+Defines a normalize function for L2-normalizing vectors (important for cosine similarity).
+Defines read_txt_ids to read image IDs from a text file (one per line).
+
+2) File Paths
+
+Sets the paths for the query and gallery HDF5 files.
+Sets the paths for test_query.txt and test_gallery.txt, which contain the list of image IDs for queries and gallery images.
+
+3) Load and Process Query
+
+Opens the query HDF5 file and lists all keys (should be one per query).
+Prints information about the query file structure and descriptor shapes.
+Loads the first query’s descriptor, reshapes it to combine all local descriptors, and averages (pools) them to get a single global vector.
+Normalizes the query vector.
+Loads the corresponding query image filename from test_query.txt and prints it.
+
+4) Load and Process Gallery
+
+Reads gallery image IDs from test_gallery.txt.
+Opens the gallery HDF5 file and checks if it contains a single dataset (e.g., 'features').
+If so, extracts only the 'descriptor' field, reshapes and averages across all local descriptors for each image to get global vectors.
+If not, falls back to per-image keys and processes each as above.
+Normalizes all gallery vectors.
+
+5) Compute Similarities and Ranking
+
+Computes cosine similarity scores between the query vector and all gallery vectors.
+Sorts the gallery images by similarity (descending).
+Prints the top-k (default 5) most similar gallery images and their scores, using the IDs from test_gallery.txt.
+
+6) Output
+
+The script prints the query image filename, the query HDF5 key, and the top-k ranked gallery image filenames with their similarity scores.
+This script is a minimal retrieval evaluation: it takes a query image, computes its global descriptor, compares it to all gallery images, and reports the most similar ones, using the correct mapping between HDF5 data and image filenames.
+
+
+
 '''
+
+
+
 
 # Normalize (important for cosine similarity)
 def normalize(v):
