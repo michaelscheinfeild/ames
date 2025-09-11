@@ -2,6 +2,76 @@
 """
 Quick data format inspector to understand your HDF5 and pickle files
 Run this first to understand the data structure
+
+
+DATA FORMAT INSPECTOR
+============================================================
+
+==================== dinov2_gallery_local.hdf5 ====================
+Keys: ['features']
+
+Dataset: features
+  Shape: (4993,)
+  Dtype: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
+  Size: 5.06 GB
+
+==================== dinov2_query_local.hdf5 ====================
+Keys: ['features']
+
+Dataset: features
+  Shape: (70,)
+  Dtype: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
+  Size: 0.07 GB
+
+==================== gnd_roxford5k.pkl ====================
+Type: <class 'dict'>
+Keys: ['gnd', 'imlist', 'qimlist']
+Number of queries: 70
+First few queries: ['all_souls_000013', 'all_souls_000026', 'oxford_002985']
+Number of gallery images: 4993
+First few gallery: ['ashmolean_000283', 'oxford_002124', 'radcliffe_camera_000158']
+Ground truth entries: 70
+First entry keys: ['bbx', 'easy', 'hard', 'junk']
+First entry 'bbx' count: 4
+First entry 'easy' count: 65
+First entry 'hard' count: 38
+First entry 'junk' count: 33
+
+==================== nn_dinov2.pkl ====================
+Type: <class 'torch.Tensor'>
+
+==================== test_gallery.txt ====================
+Total lines: 4993
+First 5 lines:
+  1: jpg/ashmolean_000283.jpg,1,1024,768
+  2: jpg/oxford_002124.jpg,12,1024,683
+  3: jpg/radcliffe_camera_000158.jpg,14,740,1024
+  4: jpg/oxford_002084.jpg,12,1024,768
+  5: jpg/oxford_003332.jpg,12,1024,819
+  ...
+  4993: jpg/christ_church_000907.jpg,4,768,1024
+
+==================== test_query.txt ====================
+Total lines: 70
+First 5 lines:
+  1: jpg/all_souls_000013.jpg,0,768,1024
+  2: jpg/all_souls_000026.jpg,0,819,1024
+  3: jpg/oxford_002985.jpg,12,768,1024
+  4: jpg/all_souls_000051.jpg,0,1024,768
+  5: jpg/oxford_003410.jpg,12,683,1024
+  ...
+  70: jpg/radcliffe_camera_000031.jpg,14,686,1024
+
+============================================================
+SUMMARY
+============================================================
+Based on inspection, the typical structure should be:
+• Gallery features: [N_gallery, patches, 768] in HDF5
+• Query features: [N_query, patches, 768] in HDF5
+• Ground truth: dict with 'qimlist', 'imlist', 'gnd' keys
+• Text files: Simple lists of image names
+
+
 """
 import h5py
 import pickle
@@ -53,8 +123,14 @@ def inspect_pickle(filepath):
             
         if 'gnd' in data:
             print(f"Ground truth entries: {len(data['gnd'])}")
-            print(f"First entry keys: {list(data['gnd'][0].keys())}")
-            print(f"First entry 'ok' count: {len(data['gnd'][0]['ok'])}")
+            first_gnd = data['gnd'][0]
+            print(f"First entry keys: {list(first_gnd.keys())}")
+            for k in first_gnd:
+                v = first_gnd[k]
+                if isinstance(v, (list, np.ndarray)):
+                    print(f"First entry '{k}' count: {len(v)}")
+                else:
+                    print(f"First entry '{k}': {v}")
 
 def inspect_text_file(filepath):
     """Inspect text file"""
