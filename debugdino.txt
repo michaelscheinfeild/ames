@@ -1,0 +1,398 @@
+==================== dinov2_gallery_local.hdf5 ====================
+Keys: ['features']
+
+Dataset: features
+  Shape: (4993,)
+  Dtype: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
+  Size: 5.06 GB
+
+
+----------------------------
+all_souls_000013.jpg
+Query image: oxford_002985.jpg
+Gallery size: 4993
+Global max similarity: -1.9539
+Global min similarity: -8.7093
+Global mean similarity: -7.9043
+
+Top 25 matches:
+------------------------------------------------------------
+Rank  1: jpg/magdalen_000184.jpg,9,1024,768 | Score: -1.9539
+Rank  2: jpg/bodleian_000015.jpg,3,1024,768 | Score: -2.0449
+Rank  3: jpg/oxford_001780.jpg,12,768,1024 | Score: -2.3172
+Rank  4: jpg/magdalen_000244.jpg,9,1024,768 | Score: -2.4078
+Rank  5: jpg/trinity_000372.jpg,15,1024,768 | Score: -2.4642
+Rank  6: jpg/jesus_000278.jpg,7,1024,768 | Score: -2.5184
+Rank  7: jpg/magdalen_000736.jpg,9,768,1024 | Score: -2.5587
+Rank  8: jpg/keble_000201.jpg,8,768,1024 | Score: -2.6508
+Rank  9: jpg/trinity_000374.jpg,15,1024,768 | Score: -2.6623
+Rank 10: jpg/magdalen_000260.jpg,9,1024,768 | Score: -2.7190
+Rank 11: jpg/balliol_000158.jpg,2,768,1024 | Score: -2.8193
+Rank 12: jpg/oxford_000065.jpg,12,1024,680 | Score: -2.8966
+Rank 13: jpg/oxford_000405.jpg,12,1024,732 | Score: -2.9690
+Rank 14: jpg/new_000236.jpg,10,1024,768 | Score: -3.0671
+Rank 15: jpg/oxford_002601.jpg,12,768,1024 | Score: -3.1279
+Rank 16: jpg/oxford_002724.jpg,12,1024,768 | Score: -3.1290
+Rank 17: jpg/magdalen_000319.jpg,9,1024,768 | Score: -3.1361
+Rank 18: jpg/new_001099.jpg,10,1024,683 | Score: -3.1377
+Rank 19: jpg/oxford_003358.jpg,12,1024,683 | Score: -3.1539
+Rank 20: jpg/bodleian_000116.jpg,3,767,1024 | Score: -3.2003
+Rank 21: jpg/jesus_000324.jpg,7,1024,768 | Score: -3.2675
+Rank 22: jpg/oxford_003554.jpg,12,768,1024 | Score: -3.2725
+Rank 23: jpg/keble_000010.jpg,8,1024,683 | Score: -3.2958
+Rank 24: jpg/oxford_000745.jpg,12,1024,768 | Score: -3.3127
+Rank 25: jpg/magdalen_000201.jpg,9,1024,768 | Score: -3.3147
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000184.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\bodleian_000015.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_001780.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000244.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\trinity_000372.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\jesus_000278.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000736.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\keble_000201.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\trinity_000374.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000260.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\balliol_000158.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_000065.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_000405.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\new_000236.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_002601.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_002724.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000319.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\new_001099.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_003358.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\bodleian_000116.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\jesus_000324.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_003554.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\keble_000010.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_000745.jpg
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\magdalen_000201.jpg
+
+Similarity statistics:
+Max: -1.9539
+Min: -8.7093
+Mean: -7.9043
+Std: 1.2194
+(venvemes) PS C:\gitRepo\ames> 
+
+
+
+Query: all_souls_000013
+Bounding box count: 4
+Easy positives: 65
+Hard positives: 38
+Junk images: 33
+
+🎯 EXPECTED TOP RESULTS (Easy positives):
+------------------------------------------------------------
+Rank  1: all_souls_000153               | Gallery: jpg/all_souls_000153.jpg,0,1024,768
+Rank  2: all_souls_000126               | Gallery: jpg/all_souls_000126.jpg,0,768,1024
+Rank  3: all_souls_000055               | Gallery: jpg/all_souls_000055.jpg,0,768,1024
+Rank  4: oxford_000130                  | Gallery: jpg/oxford_000130.jpg,12,819,1024
+Rank  5: all_souls_000091               | Gallery: jpg/all_souls_000091.jpg,0,1024,768
+Rank  6: all_souls_000073               | Gallery: jpg/all_souls_000073.jpg,0,1024,768
+Rank  7: oxford_000177                  | Gallery: jpg/oxford_000177.jpg,12,1024,768
+Rank  8: all_souls_000001               | Gallery: jpg/all_souls_000001.jpg,0,1024,683
+Rank  9: all_souls_000064               | Gallery: jpg/all_souls_000064.jpg,0,1024,767
+Rank 10: oxford_000926                  | Gallery: jpg/oxford_000926.jpg,12,768,1024
+Rank 11: hertford_000039                | Gallery: jpg/hertford_000039.jpg,6,1024,768
+Rank 12: all_souls_000040               | Gallery: jpg/all_souls_000040.jpg,0,1024,768
+Rank 13: all_souls_000146               | Gallery: jpg/all_souls_000146.jpg,0,768,1024
+Rank 14: oxford_002503                  | Gallery: jpg/oxford_002503.jpg,12,768,1024
+Rank 15: all_souls_000041               | Gallery: jpg/all_souls_000041.jpg,0,768,1024
+Rank 16: all_souls_000093               | Gallery: jpg/all_souls_000093.jpg,0,1024,768
+Rank 17: all_souls_000105               | Gallery: jpg/all_souls_000105.jpg,0,768,1024
+Rank 18: oxford_001308                  | Gallery: jpg/oxford_001308.jpg,12,1024,683
+Rank 19: all_souls_000048               | Gallery: jpg/all_souls_000048.jpg,0,1024,566
+Rank 20: all_souls_000103               | Gallery: jpg/all_souls_000103.jpg,0,1024,768
+Rank 21: all_souls_000214               | Gallery: jpg/all_souls_000214.jpg,0,768,1024
+Rank 22: oxford_000669                  | Gallery: jpg/oxford_000669.jpg,12,1024,768
+Rank 23: all_souls_000014               | Gallery: jpg/all_souls_000014.jpg,0,1024,768
+Rank 24: oxford_000262                  | Gallery: jpg/oxford_000262.jpg,12,1024,683
+Rank 25: all_souls_000148               | Gallery: jpg/all_souls_000148.jpg,0,1024,768
+
+🔥 HARD POSITIVES (should also match):
+------------------------------------------------------------
+Hard  1: all_souls_000110               | Gallery: jpg/all_souls_000110.jpg,0,1024,253
+Hard  2: oxford_000587                  | Gallery: jpg/oxford_000587.jpg,12,1024,768
+Hard  3: all_souls_000062               | Gallery: jpg/all_souls_000062.jpg,0,1024,768
+Hard  4: all_souls_000060               | Gallery: jpg/all_souls_000060.jpg,0,768,1024
+Hard  5: oxford_002145                  | Gallery: jpg/oxford_002145.jpg,12,1024,768
+Hard  6: all_souls_000220               | Gallery: jpg/all_souls_000220.jpg,0,1024,768
+Hard  7: oxford_000423                  | Gallery: jpg/oxford_000423.jpg,12,1024,768
+Hard  8: oxford_002762                  | Gallery: jpg/oxford_002762.jpg,12,1024,683
+Hard  9: oxford_002508                  | Gallery: jpg/oxford_002508.jpg,12,1024,315
+Hard 10: oxford_000728                  | Gallery: jpg/oxford_000728.jpg,12,1024,768
+
+🗑️  JUNK (should be ignored):
+------------------------------------------------------------
+Junk  1: radcliffe_camera_000279
+Junk  2: radcliffe_camera_000426
+Junk  3: oxford_001567
+Junk  4: all_souls_000186
+Junk  5: oxford_003478
+
+📊 STATISTICS:
+Total gallery images: 4993
+Relevant images (easy+hard): 103
+Expected precision in top-25: 100.0%
+
+🎯 BETTER QUERY SUGGESTIONS:
+================================================================================
+Queries with many easy matches (better for testing):
+--------------------------------------------------------------------------------
+ 1. radcliffe_camera_000519        | Easy: 248 | Hard: 99 | Total: 347
+ 2. oxford_002904                  | Easy: 248 | Hard: 99 | Total: 347
+ 3. radcliffe_camera_000523        | Easy: 248 | Hard: 99 | Total: 347
+ 4. radcliffe_camera_000095        | Easy: 248 | Hard: 99 | Total: 347
+ 5. bodleian_000132                | Easy: 248 | Hard: 99 | Total: 347
+ 6. radcliffe_camera_000290        | Easy: 239 | Hard: 93 | Total: 332
+ 7. radcliffe_camera_000286        | Easy: 243 | Hard: 65 | Total: 308
+ 8. radcliffe_camera_000031        | Easy: 10 | Hard: 284 | Total: 294
+ 9. christ_church_000262           | Easy: 54 | Hard: 73 | Total: 127
+10. oxford_002364                  | Easy:  6 | Hard: 117 | Total: 123
+
+💡 RECOMMENDATIONS:
+1. Try a query with more easy matches (from list above)
+2. Run the pipeline with a suggested query
+3. Use compare_with_pipeline_results() to analyze results
+PS C:\gitRepo\ames\src> 
+
+
+
+g
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\oxford_002724.jpg 
+Debug: Loading image from C:\gitRepo\ames\data\roxford5k\jpg\jesus_000278.jpg
+
+Similarity statistics:
+Max: -3.1308
+Min: -8.7094
+Mean: -8.2373
+Std: 0.8978
+================================================================================
+GROUND TRUTH ANALYSIS FOR: all_souls_000013
+================================================================================
+✅ Query found at index: 0
+
+Query: all_souls_000013
+Bounding box count: 4
+Easy positives: 65
+Hard positives: 38
+Junk images: 33
+
+🎯 EXPECTED TOP RESULTS (Easy positives):
+------------------------------------------------------------
+Rank  1: all_souls_000153               | Gallery: jpg/all_souls_000153.jpg,0,1024,768
+Rank  2: all_souls_000126               | Gallery: jpg/all_souls_000126.jpg,0,768,1024
+Rank  3: all_souls_000055               | Gallery: jpg/all_souls_000055.jpg,0,768,1024
+Rank  4: oxford_000130                  | Gallery: jpg/oxford_000130.jpg,12,819,1024
+Rank  5: all_souls_000091               | Gallery: jpg/all_souls_000091.jpg,0,1024,768
+Rank  6: all_souls_000073               | Gallery: jpg/all_souls_000073.jpg,0,1024,768
+Rank  7: oxford_000177                  | Gallery: jpg/oxford_000177.jpg,12,1024,768
+Rank  8: all_souls_000001               | Gallery: jpg/all_souls_000001.jpg,0,1024,683
+Rank  9: all_souls_000064               | Gallery: jpg/all_souls_000064.jpg,0,1024,767
+Rank 10: oxford_000926                  | Gallery: jpg/oxford_000926.jpg,12,768,1024
+Rank 11: hertford_000039                | Gallery: jpg/hertford_000039.jpg,6,1024,768
+Rank 12: all_souls_000040               | Gallery: jpg/all_souls_000040.jpg,0,1024,768
+Rank 13: all_souls_000146               | Gallery: jpg/all_souls_000146.jpg,0,768,1024
+Rank 14: oxford_002503                  | Gallery: jpg/oxford_002503.jpg,12,768,1024
+Rank 15: all_souls_000041               | Gallery: jpg/all_souls_000041.jpg,0,768,1024
+Rank 16: all_souls_000093               | Gallery: jpg/all_souls_000093.jpg,0,1024,768
+Rank 17: all_souls_000105               | Gallery: jpg/all_souls_000105.jpg,0,768,1024
+Rank 18: oxford_001308                  | Gallery: jpg/oxford_001308.jpg,12,1024,683
+Rank 19: all_souls_000048               | Gallery: jpg/all_souls_000048.jpg,0,1024,566
+Rank 20: all_souls_000103               | Gallery: jpg/all_souls_000103.jpg,0,1024,768
+Rank 21: all_souls_000214               | Gallery: jpg/all_souls_000214.jpg,0,768,1024
+Rank 22: oxford_000669                  | Gallery: jpg/oxford_000669.jpg,12,1024,768
+Rank 23: all_souls_000014               | Gallery: jpg/all_souls_000014.jpg,0,1024,768
+Rank 24: oxford_000262                  | Gallery: jpg/oxford_000262.jpg,12,1024,683
+Rank 25: all_souls_000148               | Gallery: jpg/all_souls_000148.jpg,0,1024,768
+
+🔥 HARD POSITIVES (should also match):
+------------------------------------------------------------
+Hard  1: all_souls_000110               | Gallery: jpg/all_souls_000110.jpg,0,1024,253
+Hard  2: oxford_000587                  | Gallery: jpg/oxford_000587.jpg,12,1024,768
+Hard  3: all_souls_000062               | Gallery: jpg/all_souls_000062.jpg,0,1024,768
+Hard  4: all_souls_000060               | Gallery: jpg/all_souls_000060.jpg,0,768,1024
+Hard  5: oxford_002145                  | Gallery: jpg/oxford_002145.jpg,12,1024,768
+Hard  6: all_souls_000220               | Gallery: jpg/all_souls_000220.jpg,0,1024,768
+Hard  7: oxford_000423                  | Gallery: jpg/oxford_000423.jpg,12,1024,768
+Hard  8: oxford_002762                  | Gallery: jpg/oxford_002762.jpg,12,1024,683
+Hard  9: oxford_002508                  | Gallery: jpg/oxford_002508.jpg,12,1024,315
+Hard 10: oxford_000728                  | Gallery: jpg/oxford_000728.jpg,12,1024,768
+
+🗑️  JUNK (should be ignored):
+------------------------------------------------------------
+Junk  1: radcliffe_camera_000279
+Junk  2: radcliffe_camera_000426
+Junk  3: oxford_001567
+Junk  4: all_souls_000186
+Junk  5: oxford_003478
+
+📊 STATISTICS:
+Total gallery images: 4993
+Relevant images (easy+hard): 103
+Expected precision in top-25: 100.0%
+
+🔍 PIPELINE RESULTS ANALYSIS:
+================================================================================
+Pipeline results vs Ground Truth:
+--------------------------------------------------------------------------------
+Rank  1: new_001099                     | Score: -3.1308 | ❌ WRONG
+Rank  2: magdalen_000184                | Score: -3.1599 | ❌ WRONG
+Rank  3: magdalen_000260                | Score: -3.3543 | ❌ WRONG
+Rank  4: oxford_000745                  | Score: -3.3544 | ❌ WRONG
+Rank  5: oxford_002601                  | Score: -3.3606 | ❌ WRONG
+Rank  6: worcester_000061               | Score: -3.4439 | ❌ WRONG
+Rank  7: oxford_000405                  | Score: -3.5010 | ❌ WRONG
+Rank  8: magdalen_000244                | Score: -3.6426 | ❌ WRONG
+Rank  9: oxford_002367                  | Score: -3.6900 | ❌ WRONG
+Rank 10: magdalen_000201                | Score: -3.7010 | ❌ WRONG
+Rank 11: worcester_000060               | Score: -3.7125 | ❌ WRONG
+Rank 12: bodleian_000015                | Score: -3.7254 | ❌ WRONG
+Rank 13: worcester_000062               | Score: -3.7913 | ❌ WRONG
+Rank 14: oxford_003554                  | Score: -3.9022 | ❌ WRONG
+Rank 15: new_000236                     | Score: -3.9092 | ❌ WRONG
+Rank 16: magdalen_000200                | Score: -3.9823 | ❌ WRONG
+Rank 17: keble_000010                   | Score: -4.0232 | ❌ WRONG
+Rank 18: new_000154                     | Score: -4.2075 | ❌ WRONG
+Rank 19: bodleian_000116                | Score: -4.2195 | ❌ WRONG
+Rank 20: keble_000201                   | Score: -4.2368 | ❌ WRONG
+Rank 21: magdalen_000570                | Score: -4.2966 | ❌ WRONG
+Rank 22: oxford_002670                  | Score: -4.3098 | ❌ WRONG
+Rank 23: magdalen_000225                | Score: -4.3216 | ❌ WRONG
+Rank 24: oxford_002724                  | Score: -4.3506 | ❌ WRONG
+Rank 25: jesus_000278                   | Score: -4.3665 | ❌ WRONG
+
+📈 PERFORMANCE METRICS:
+Easy matches in top-25: 0/25 (0.0%)
+Hard matches in top-25: 0/25 (0.0%)
+Total relevant in top-25: 0/25 (0.0%)
+Junk in top-25: 0/25 (0.0%)
+
+
+----------------
+💡 RECOMMENDATION:
+The fundamental issue is that your gallery features and pipeline use different feature extraction methods. Here are your options:
+
+Option 1: Re-extract Gallery Features (RECOMMENDED)
+Run the script I just created to re-extract all gallery features using your exact pipeline:
+
+python fix_gallery_features.py
+
+This will:
+
+Use your exact DINOv2 + spatial attention pipeline
+Re-extract features for all 4993 gallery images
+Save as dinov2_gallery_local_reextracted.hdf5
+Test the results
+⚠️ Warning: This will take ~2-3 hours for 4993 images on GPU.
+
+
+Option 2: Use Original Extraction Scripts
+Try to replicate the exact extraction command that created your gallery:
+
+python extract/extract_descriptors.py --dataset roxford5k --file_name test_gallery.txt --backbone dinov2 --topk 700 --save_path data --data_path data/roxford5k
+
+
+Option 3: Use Pre-computed Results
+Use the nn_dinov2.pkl file which contains pre-computed similarities.
+
+Which option would you prefer? The re-extraction (Option 1) is most likely to work since it uses your exact pipeline.
+
+You're absolutely right! Let me check the AMES class in the src directory to understand the model better:
+
+Perfect! Let me examine the local AMES model:
+
+Read ames.py
+
+Excellent! Now I can see the issue. The local AMES class is different from the hub model. Let me modify your pipeline to use the local AMES class instead of the hub model:
+
+complete_ames_pipelinev2_fixed.py+19-14
+Now let's test the pipeline with the local AMES class. But first, let me also check what the configuration should be by looking at any training configs:
+
+Read ames.yaml
+
+Perfect! The configuration matches what I used. Now let's also check if there are any other model configurations available:
+
+The results are still identical even with the local AMES class - still getting 0% precision. This strongly suggests the issue is deeper. Let me check one more possibility - let's try one of the better query images suggested by the diagnostic:
+
+complete_ames_pipelinev2_fixed.py+2-2
+🚨 CRITICAL FINDING!
+Even with the BEST possible query (radcliffe_camera_000519 with 347 relevant matches out of 4993), we're still getting 0% precision! This confirms the problem is fundamental.
+
+Expected: radcliffe_camera_* images
+Got: jesus_*, new_*, trinity_*, etc.
+
+🔍 Root Cause Confirmed:
+The issue is that your gallery features and your pipeline are using different feature extraction methods. The gallery features were likely created with a different:
+
+DINOv2 version
+Spatial attention detector weights
+Feature normalization/preprocessing
+AMES model version
+💡 SOLUTION:
+You need to re-extract the gallery features using your current pipeline, or find the exact scripts that were used to create the existing gallery features.
+
+Let me check if there are extraction scripts that match your gallery data:
+
+Read extract_dino.py, lines 1 to 50
+
+Now let me check the exact command used to extract your gallery features:
+
+Let me check the original script that was likely used to create the gallery:
+
+Read extract_descriptors.py
+
+Perfect! Now I see the issue. Let me create a script to re-extract gallery features using the exact same method as your pipeline:
+
+Created fix_gallery_features.py
+
+💡 RECOMMENDATION:
+The fundamental issue is that your gallery features and pipeline use different feature extraction methods. Here are your options:
+
+Option 1: Re-extract Gallery Features (RECOMMENDED)
+Run the script I just created to re-extract all gallery features using your exact pipeline:
+
+This will:
+
+Use your exact DINOv2 + spatial attention pipeline
+Re-extract features for all 4993 gallery images
+Save as dinov2_gallery_local_reextracted.hdf5
+Test the results
+⚠️ Warning: This will take ~2-3 hours for 4993 images on GPU.
+
+Option 2: Use Original Extraction Scripts
+Try to replicate the exact extraction command that created your gallery:
+
+Option 3: Use Pre-computed Results
+Use the nn_dinov2.pkl file which contains pre-computed similarities.
+
+
+----------
+extract 500 features
+
+$env:PYTHONPATH="$PWD"; C:/gitRepo/ames/venvemes/Scripts/python.exe extract/extract_descriptors.py --dataset roxford5k --backbone dinov2 --save_path data --data_path "C:\gitRepo\ames\data\roxford5k" --split _gallery --file_name test_gallery_500.txt --desc_type "local" --pretrained
+
+
+
+Perfect! The extraction worked correctly:
+
+✅ Successful Feature Extraction Summary
+What was accomplished:
+
+Extracted features for 500 images from the roxford5k gallery dataset
+Used DINOv2 backbone with pretrained spatial attention detector
+Generated local features with 700 top features per image
+Feature dimensions: 773 (coordinates + descriptors)
+Output file: dinov2_gallery_local.hdf5
+Processing time: ~2 minutes
+File size: 1GB (500 × 700 × 773 × 4 bytes ≈ 1GB)
+Technical details:
+
+Feature format: (500, 700, 773) where:
+500 = number of images processed
+700 = top-k local features per image
+773 = feature vector (2 coords + 1 scale + 1 mask + 1 weight + 768 descriptor)
+All 500 images processed successfully (no empty entries)
+Features properly normalized with reasonable value ranges
