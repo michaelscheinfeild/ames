@@ -150,7 +150,8 @@ def inspect_text_file(filepath):
 
 def main():
     """Inspect all data files"""
-    data_root = Path(r"C:\github\ames\ames\data\roxford5k")
+    #data_root = Path(r"C:\github\ames\ames\data\roxford5k")
+    data_root = Path(r"C:\gitRepo\ames\data\roxford5k")
     
     print("DATA FORMAT INSPECTOR")
     print("="*60)

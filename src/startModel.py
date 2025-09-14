@@ -2,6 +2,12 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 
+'''
+load model 
+create random features 2 images
+compute similarity  global which is scalar
+'''
+
 # Load the pretrained model, and weights and set it to evaluation mode
 
 model = torch.hub.load('pavelsuma/ames', 'dinov2_ames').eval()
