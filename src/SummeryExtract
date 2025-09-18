@@ -1,0 +1,95 @@
+AMES Feature Extraction Pipeline Summary
+========================================
+
+OVERVIEW
+--------
+The extract_descriptors.py script extracts local and global features using AMES 
+(Attention-based Multi-scale Embedding for Similarity) from images using different backbones.
+
+SUPPORTED BACKBONES
+-------------------
+DINOv2:
+- Global/Local Dimensions: 768
+- Patch Size: 14x14 pixels
+- Scale: Single scale (1.0)
+- Model: Vision Transformer from torch.hub
+
+CVNet:
+- Global Dimension: 2048
+- Local Dimension: 1024
+- Scales: Multi-scale [0.7071, 1.0, 1.4142]
+- Model: ResNet-101 based network
+
+KEY COMPONENTS
+--------------
+1. Spatial Attention Detector:
+   - Takes local features as input
+   - Outputs attention weights for each spatial location
+   - Uses pretrained weights (dinov2_detector.pt or cvnet_detector.pt)
+   - Determines which patches are most important for retrieval
+
+2. Feature Storage:
+   - Saves extracted features to HDF5 format
+   - Structured arrays containing:
+     * Metadata: (700, 5) - patch coordinates, scale, orientation, confidence
+     * Descriptors: (700, 768) - feature vectors for top-k patches
+
+COMMAND LINE ARGUMENTS
+----------------------
+--pretrained     (Default: True)        Load pretrained detector weights
+--save_path      (Default: 'data')      Output directory for features
+--data_path      (Required)             Input dataset directory
+--dataset        (Required)             Dataset name (roxford5k, rparis6k, etc.)
+--split          (Default: '')          Dataset split (_query, _gallery)
+--backbone       (Default: 'dinov2')    Feature extractor (dinov2, cvnet)
+--topk           (Default: 700)         Number of top patches to keep
+--desc_type      (Default: 'cls,global,local') Types of descriptors to extract
+--imsize         (Optional)             Image resize dimension
+--num_workers    (Default: 8)           DataLoader workers
+
+USAGE EXAMPLES
+--------------
+Extract Gallery Features:
+python extract_descriptors.py --dataset roxford5k --split _gallery --backbone dinov2 --data_path data/roxford5k --save_path data --file_name test_gallery.txt
+
+Extract Query Features:
+python extract_descriptors.py --dataset roxford5k --split _query --backbone dinov2 --data_path data/roxford5k --save_path data --file_name test_query.txt
+
+PIPELINE FLOW
+-------------
+1. Load Model: Initialize backbone (DINOv2 or CVNet)
+2. Load Detector: Load pretrained spatial attention detector
+3. Create Dataset: Set up image dataset with proper transforms
+4. Extract Features: Process images through backbone + detector
+5. Apply Attention: Use spatial attention to rank patches
+6. Select Top-K: Keep only the 700 most important patches
+7. Save Features: Store in HDF5 format with metadata
+
+OUTPUT FORMAT
+-------------
+HDF5 files with structure:
+Dataset: features
+  Shape: (N_images,)
+  Dtype: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
+
+Where:
+- N_images: Number of images in dataset
+- 700: Number of selected patches per image
+- 5: Metadata values (x, y, scale, orientation, confidence)
+- 768: Feature dimension (for DINOv2)
+
+TOPK SELECTION PROCESS
+----------------------
+1. Parameter Flow: topk passed from command line (default 700)
+2. Spatial Attention: SpatialAttention2d detector assigns importance scores to patches
+3. Ranking: Patches ranked by attention weights (learned during training)
+4. Selection: Only top 700 patches (highest attention) are kept
+5. Storage: Selected patches become final local descriptors in HDF5
+
+DEPENDENCIES
+------------
+- PyTorch
+- torchvision
+- h5py
+- PIL
+- Custom modules:
