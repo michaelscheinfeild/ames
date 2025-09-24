@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import h5py
 from pathlib import Path
+import pickle
 
 # Add the parent directory to access modules
 parent_dir = Path(__file__).parent.parent
@@ -25,8 +26,9 @@ def test_500_images_new_features():
     
     # Initialize pipeline
     pipeline = CompletePipeline(
-        data_root=r"C:\gitRepo\ames\data", 
-        model_path="dinov2_ames.pt"
+        #data_root=r"C:\gitRepo\ames\data", 
+		 data_root=r"C:\gitRepo\ames\data\roxford5k\Data500\roxford", 
+         model_path="dinov2_ames.pt"
     )
     
     # Override methods to use newly extracted 500-image files
@@ -54,12 +56,15 @@ def test_500_images_new_features():
                 return None, None
         
         # Load 500-image gallery names
-        with open(gallery_path / "test_gallery_500.txt", 'r') as f:
+	    with open(gallery_path / "test_gallery.txt", 'r') as f:
             pipeline.gallery_names = [line.strip() for line in f.readlines()]
+        #with open(gallery_path / "test_gallery_500.txt", 'r') as f:
+        #    pipeline.gallery_names = [line.strip() for line in f.readlines()]
         
         # Load 500-image ground truth
-        import pickle
-        gnd_path = gallery_path / f"gnd_{dataset}_500.pkl"
+    
+        #gnd_path = gallery_path / f"gnd_{dataset}_500.pkl"
+		gnd_path = gallery_path / f"gnd_{dataset}.pkl"
         if gnd_path.exists():
             with open(gnd_path, 'rb') as f:
                 pipeline.ground_truth = pickle.load(f)
@@ -90,7 +95,8 @@ def test_500_images_new_features():
             # Load 500-image ground truth for diagnostic
             import pickle
             data_path = Path(pipeline.data_root) / "roxford5k"
-            with open(data_path / "gnd_roxford5k_500.pkl", 'rb') as f:
+            #with open(data_path / "gnd_roxford5k_500.pkl", 'rb') as f:
+			with open(data_path / "gnd_roxford5k.pkl", 'rb') as f:
                 gnd_data = pickle.load(f)
             
             # Find query

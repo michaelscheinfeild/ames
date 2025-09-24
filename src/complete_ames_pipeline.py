@@ -185,7 +185,7 @@ class CompletePipeline:
         # Load gallery features
         gallery_hdf5 = gallery_path / "dinov2_gallery_local.hdf5"
 
-        inspect_hdf5(gallery_hdf5)
+        #inspect_hdf5(gallery_hdf5)
 
         if gallery_hdf5.exists():
             with h5py.File(gallery_hdf5, 'r') as f:

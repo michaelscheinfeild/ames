@@ -4,6 +4,7 @@ Quick data format inspector to understand your HDF5 and pickle files
 Run this first to understand the data structure
 
 
+DINO-> SpatialAttention2d->  AMES
 DATA FORMAT INSPECTOR
 ============================================================
 
@@ -15,6 +16,12 @@ Dataset: features
   Dtype: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
   Size: 5.06 GB
 
+x-coordinate of the patch center
+y-coordinate of the patch center
+scale or size information
+orientation or rotation
+confidence or attention weight
+So for each image in the gallery (4993 total), we have 5 metadata fields and 768 descriptor features.
 ==================== dinov2_query_local.hdf5 ====================
 Keys: ['features']
 

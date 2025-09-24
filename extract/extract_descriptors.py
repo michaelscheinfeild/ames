@@ -6,10 +6,19 @@ from functools import partial
 import torch
 from torch.utils.data import SequentialSampler, BatchSampler
 
+
+from .extract_dino import extract as extract_dino, load_dinov2
+from .extract_cvnet import extract as extract_cvnet, load_cvnet
+from .image_dataset import read_imlist, DataSet, FeatureStorage
+from .spatial_attention_2d import SpatialAttention2d
+'''
 from extract_dino import extract as extract_dino, load_dinov2
 from extract_cvnet import extract as extract_cvnet, load_cvnet
 from image_dataset import read_imlist, DataSet, FeatureStorage
 from spatial_attention_2d import SpatialAttention2d
+'''
+
+import sys
 
 _BASE_URL = 'http://ptak.felk.cvut.cz/personal/sumapave/public/ames/networks/'
 
@@ -86,4 +95,75 @@ def main():
 
 
 if __name__ == "__main__":
+    #  $env:PYTHONPATH = "C:\gitRepo\ames;" + $env:PYTHONPATH
+    '''
+    What Will Happen
+    The script will now perform the following actions:
+
+    -Load Model: It will load the pretrained DINOv2 model.
+    -Read Image List: It will read the 20 image names from image_list.txt.
+    -Process Images: For each of the 20 .tif images, it will:
+
+    Load the image from SmallDb.
+    Extract the top 600 local features (patches).
+    Save Features: It will save all the extracted features into a single HDF5 file.
+    Expected Output
+    After the script finishes, you will have a new file at this location:
+
+    File Path: C:\OrthoPhoto\SmallData\ortho\dinov2_gallery_local.hdf5
+    This HDF5 file contains the local descriptors for all your images in the Flat 
+    Array format we discussed, ready to be used by the AMES model.
+
+    Once this file is created, you can proceed to set up the evaluate.py script to
+    perform retrieval tasks using your own custom dataset.
+
+    Shape: (20, 600, 773)
+
+    20: The number of images in your dataset.
+    600: The number of local features (patches) extracted per image (--topk).
+    773: The dimension of each patch's data, which is a combination of metadata and the feature vector.
+    Data Type: float32 (since you are using dinov2 for non-binary features).
+
+    Structure of the 773 Dimension
+    For each of the 600 patches, the 773 values are structured as follows:
+
+    Index Range	Content	Dimension	Description
+    [0:5]	Metadata	5	Positional and validity information.
+    [5:773]	Feature Vector	768	The actual DINOv2 descriptor for the patch.
+    The 5 metadata values are crucial for the AMES model:
+
+    Index	Field	Description
+    0	x-coordinate	Horizontal position of the patch.
+    1	y-coordinate	Vertical position of the patch.
+    2	scale	Scale of the patch.
+    3	mask	Validity flag (1.0=valid, 0.0=padding).
+    4	attention weight	Importance score from the detector.
+
+
+    ''' 
+
+    #pathData = r'C:\OrthoPhoto\SmallDb'
+
+
+
+
+    '''
+    For the AMES model evaluation as configured in evaluate.py,
+    you primarily need the local descriptors.
+    The global descriptors are often used in a full retrieval pipeline 
+    for the initial search, which is then refined by AMES using the local descriptors.
+
+    desc_type = 'cls,global,local'
+
+    desc_type = 'local'
+    # Generates: dinov2_gallery_local.hdf5
+
+    desc_type = 'global'
+    # Generates: dinov2_gallery_global.hdf5
+
+    '''
+
+
     main()
+
+   

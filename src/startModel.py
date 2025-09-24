@@ -20,8 +20,9 @@ model = torch.hub.load('pavelsuma/ames', 'dinov2_ames').eval()
 
 # Simulate two sets of image features (100 patches, each with 768 dimensions)
 
-img_1_feat = torch.randn(1, 100, 768)
-img_2_feat = torch.randn(1, 100, 768)
+Nimg = 22
+img_1_feat = torch.randn(Nimg, 100, 768)
+img_2_feat = torch.randn(Nimg, 130, 768)
 
 # Compute similarity between the two sets of features
 sim = model(src_local=img_1_feat, tgt_local=img_2_feat)
@@ -37,7 +38,12 @@ where each entry represents the similarity between a patch from img_1_feat and a
 print("Similarity shape:", sim.shape)
 print("Similarity matrix:", sim)
 
-print("Similarity value:", sim.item())
+if sim.numel() == 1:
+    print("Similarity value:", sim.item())
+else:
+    print("Similarity values (batch):", sim)
+    print("Mean similarity:", sim.mean().item())
+    print("First similarity:", sim[0].item())
 
 '''
 # average similarity
