@@ -4,6 +4,7 @@ import h5py
 import hydra
 import numpy as np
 import torch
+import time  # Add this to your imports
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,12 +15,14 @@ from omegaconf import DictConfig
 def compute_similarity_matrix(model, metadata, masks, descriptors, device):
     """Compute 8x8 similarity matrix using individual pairwise comparisons"""
     
+    # Start timing
+    start_time = time.time()
     features, mask_tensor = prepare_ames_input(metadata, descriptors, masks, device)
     batch_size = features.shape[0]  # 8 images
     similarity_matrix = np.zeros((batch_size, batch_size))
     
-    print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix...")
-    print("⚠️  Using pairwise computation (AMES batch limitation)")
+    #print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix...")
+    #print("⚠️  Using pairwise computation (AMES batch limitation)")
     
     with torch.no_grad():
         total_pairs = batch_size * batch_size
@@ -59,7 +62,13 @@ def compute_similarity_matrix(model, metadata, masks, descriptors, device):
                     similarity_matrix[i, j] = 1.0 if i == j else 0.1
                     completed += 1
     
-    print("✅ Similarity matrix computation complete!")
+    # End timing
+    end_time = time.time()
+    total_time = end_time - start_time
+    #print("✅ Similarity matrix computation complete!")
+    print(f"⏱️  Total time: {total_time:.2f} seconds")
+    print(f"📊 Average time per pair: {total_time/total_pairs:.3f} seconds")
+    print(f"🚀 Processing rate: {total_pairs/total_time:.1f} pairs/second")
     return similarity_matrix
 
 def plot_similarity_matrix(similarity_matrix, image_names, save_path="similarity_matrix.png"):
