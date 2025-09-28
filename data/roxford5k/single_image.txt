@@ -1,0 +1,8 @@
+jpg/all_souls_000006.jpg,0,768,1024
+jpg/all_souls_000013.jpg,0,768,1024
+jpg/all_souls_000026.jpg,0,819,1024
+jpg/all_souls_000051.jpg,0,1024,768
+jpg/oxford_000545.jpg,12,1024,768
+jpg/oxford_002416.jpg,12,1024,768
+jpg/oxford_002562.jpg,12,768,1024
+jpg/oxford_002734.jpg,12,1024,768

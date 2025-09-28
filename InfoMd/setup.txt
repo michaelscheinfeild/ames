@@ -1,0 +1,340 @@
+ רובסטי לסיבוב וסקייל
+-----------------------
+
+python src/evaluate.py descriptors=dinov2 data_root=data model_path=dinov2_ames.pt num_workers=0
+https://huggingface.co/datasets/randall-lab/revisitop
+https://www.kaggle.com/code/qiubit/baseline-model-evaluation
+
+PS C:\gitRepo\ames> python --version
+Python 3.12.3
+PS C:\gitRepo\ames> .\venvemes\Scripts\Activate
+
+python3 --version
+
+python3.12 -m venv venvemes
+.\venvemes\Scripts\Activate
+
+
+.\venv\Scripts\Activate
+pip install -r requirements.txt
+
+
+git clone https://github.com/michaelscheinfeild/ames.git
+cd ames
+
+
+
+py -3.12 -m venv venvemes
+.\venvemes\Scripts\Activate
+
+-------------------------
+
+install wget
+install choco
+
+donloaded wget
+added to system
+wget --version
+
+------------
+py -u src/evaluate.py --multirun \
+        descriptors=dinov2 \
+        data_root=data \
+        model_path=dinov2_ames.pt \
+        model.binarized=False \
+        dataset@test_dataset=roxford \
+        test_dataset.query_desc_num=600 \
+        test_dataset.db_desc_num=600 \
+        test_dataset.batch_size=300 \
+        test_dataset.lamb=[0.55] \
+        test_dataset.temp=[0.3] \
+        test_dataset.num_rerank=[1600]
+
+
+
+
+python src/evaluate.py descriptors=dinov2 data_root=data model_path=dinov2_ames.pt num_workers=0
+====================
+
+Here's how you can fix it:
+✅ Option 1: Install wget for Windows
+Download wget.exe:
+
+Go to https://eternallybored.org/misc/wget/ and download the appropriate version for your system (usually wget.exe for 64-bit).
+Add wget to your PATH:
+
+Move wget.exe to a folder like C:\Program Files\wget\ or any location you prefer.
+Add that folder to your system's PATH:
+Open Start Menu → search for Environment Variables → click Edit the system environment variables.
+In the System Properties window, click Environment Variables.
+Under System variables, find and select Path, then click Edit.
+Click New and add the path to the folder containing wget.exe.
+Click OK to close all dialogs.
+Verify installation:
+
+Open a new Command Prompt and type:
+wget --version
+You should see version info if it's installed correctly.
+
+=======================
+
+
+& "C:\ProgramData\chocolatey\bin\wget.exe" -r -nH --cut-dirs=5 --no-parent --reject="index.html*" --reject-regex ".*/gldv2(-test)?/.*" -P data http://ptak.felk.cvut.cz/personal/sumapave/public/ames/data/
+
+
+
+wget -r -nH --cut-dirs=5 --no-parent --reject="index.html*" --reject-regex ".*/gldv2(-test)?/.*" -P data http://ptak.felk.cvut.cz/personal/sumapave/public/ames/data/
+Great question—this snippet is part of a setup guide for evaluating image retrieval models using specific datasets. Let me break it down for you:
+
+🧠 What’s Going On Here?
+This is a dataset preparation and download instruction for evaluating computer vision models—specifically, models that use local descriptors and global similarities to retrieve images similar to a query image.
+
+📦 Datasets Mentioned
+ROxford5k and RParis6k: Popular benchmarks for image retrieval tasks, based on Oxford and Paris landmarks.
+
+GLDv2 test set: A test set from Google Landmarks Dataset v2.
+
+ROP distractors (+1M): A large set of additional images used to make retrieval more challenging.
+
+🧩 What Are Local Descriptors?
+These are compact representations of image regions (like SIFT, SURF, or learned features) used to compare images. You need these descriptors to evaluate how well your model retrieves similar images.
+
+📥 What the wget Command Does
+This command downloads the necessary files for the ROP dataset into a local folder called data. Here's a breakdown of the flags:
+
+Flag	Meaning
+-r	Recursively download files
+-nH	Skip creating a directory named after the host
+--cut-dirs=5	Remove the first 5 directory levels from the URL path when saving locally
+--no-parent	Don't ascend to parent directories
+--reject="index.html*"	Skip downloading index files
+--reject-regex ".*/gldv2(-test)?/.*"	Skip anything related to GLDv2 test set
+-P data	Save everything into the data folder
+So essentially, this command pulls down the ROP dataset files (excluding GLDv2 test data) and places them neatly into your local data directory, ready for use.
+
+If you're working on image retrieval or evaluating visual search models, this setup is laying the groundwork for benchmarking your model against known datasets. Want help visualizing how these descriptors work or how to use them in a model pipeline? I can walk you through that too.
+--------------------------------------
+try  num_workers=4
+
+py -u src/evaluate.py --multirun \
+        descriptors=dinov2 \
+        data_root=data \
+        model_path=dinov2_ames.pt \
+        model.binarized=False \
+        dataset@test_dataset=roxford \
+        test_dataset.query_desc_num=600 \
+        test_dataset.db_desc_num=600 \
+        test_dataset.batch_size=300 \
+        test_dataset.lamb=[0.55] \
+        test_dataset.temp=[0.3] \
+        test_dataset.num_rerank=[1600]
+python -u src/evaluate.py --multirun         descriptors=dinov2   data_root=data    model_path=dinov2_ames.pt model.binarized=False dataset@test_dataset=roxford   test_dataset.query_desc_num=600 test_dataset.db_desc_num=600  test_dataset.batch_size=300   test_dataset.lamb=[0.55]   test_dataset.temp=[0.3] test_dataset.num_rerank=[1600]
+
+(venvemes) c:\github\ames\ames>python src/evaluate.py descriptors=dinov2 data_root=data model_path=dinov2_ames.pt num_workers=0
+  0%|                                                                                                                                                                       | 0/1 [00:00<?, ?it/s]C:\github\ames\venvemes\Lib\site-packages\torch\utils\data\dataloader.py:665: UserWarning: 'pin_memory' argument is set as true but no accelerator is found, then device pinned memory won't be used.
+  warnings.warn(warn_msg)
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 400/400 [39:06<00:00,  5.87s/it]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [39:06<00:00, 2346.17s/it]
+[2025-09-08 14:35:44,969][utils.metrics][INFO] - Rerank=100, Lambda=0.5, Temp=0.5
+>> roxford5k: mAP M: 78.368, H: 59.131
+[2025-09-08 14:35:45,024][utils.revisited][INFO] - >> roxford5k: mAP M: 78.368, H: 59.131
+[2025-09-08 14:35:45,024][utils.metrics][INFO] - Rerank=400, Lambda=0.5, Temp=0.5
+>> roxford5k: mAP M: 84.043, H: 68.925
+[2025-09-08 14:35:45,066][utils.revisited][INFO] - >> roxford5k: mAP M: 84.043, H: 68.925
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 400/400 [42:54<00:00,  6.44s/it]
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [42:54<00:00, 2574.81s/it]
+[2025-09-08 15:18:39,887][utils.metrics][INFO] - Rerank=100, Lambda=0.5, Temp=0.5
+>> roxford5k: mAP M: 31.459, H: 60.644
+[2025-09-08 15:18:40,014][utils.revisited][INFO] - >> roxford5k: mAP M: 31.459, H: 60.644
+[2025-09-08 15:18:40,014][utils.metrics][INFO] - Rerank=400, Lambda=0.5, Temp=0.5
+>> roxford5k: mAP M: 36.038, H: 69.89
+[2025-09-08 15:18:40,142][utils.revisited][INFO] - >> roxford5k: mAP M: 36.038, H: 69.89
+[2025-09-08 15:18:40,142][utils.metrics][INFO] - 84.043
+[2025-09-08 15:18:40,158][utils.metrics][INFO] - 69.89
+
+
+==================
+
+
+AMES(
+  (remap_local): Sequential(
+    (0): Linear(in_features=768, out_features=128, bias=True)
+    (1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+  )
+  (decoder): TransformerDecoder(
+    (layers): ModuleList(
+      (0-4): 5 x TransformerDecoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
+        )
+        (cross_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=128, out_features=128, bias=True)
+        )
+        (linear1): Linear(in_features=128, out_features=1024, bias=True)
+        (linear2): Linear(in_features=1024, out_features=128, bias=True)
+        (norm1): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (norm2): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+        (norm3): LayerNorm((128,), eps=1e-05, elementwise_affine=True)
+      )
+    )
+  )
+  (classifier): Linear(in_features=128, out_features=1, bias=True)
+)
+
+
+----------------------------------------------
+The function compute_map calculates the mean Average Precision (mAP) and related metrics for a set of ranked retrieval results, given ground truth data.
+
+Here's what it does:
+
+Inputs:
+
+ranks: a 2D array where each column contains the ranked indices of database images for a query.
+gnd: a list of dictionaries, each containing ground truth for a query (with keys like 'ok' for positives and 'junk' for images to ignore).
+kappas: (optional) a list of cutoff values for precision@k.
+ap_f: (optional) the function used to compute average precision (default is compute_trapezoidal_ap).
+For each query:
+
+Finds the positions of positive and junk images in the ranked list.
+Adjusts the positions of positives to account for junk images.
+Computes the average precision (AP) for the query using ap_f.
+Computes precision at each kappa value if requested.
+Returns:
+
+map: mean average precision over all queries (excluding those with no positives).
+aps: AP for each query.
+pr: mean precision at each kappa.
+prs: precision at each kappa for each query.
+This function is used to evaluate retrieval systems, measuring how well the system ranks relevant images higher than irrelevant ones.
+
+
+
+-----------------
+In the rerank function, 
+the model argument is a PyTorch neural network (nn.Module) used to compute similarity scores between query and gallery image features. For each query-gallery pair, the model processes their features (usually by a forward pass) and outputs a score indicating how similar or relevant the gallery image is to the query. These scores are then used to rerank the gallery images for each query, improving retrieval accuracy by leveraging the model's learned representation.
+
+
+-----------------------------------------------------
+Files you have
+
+dinov2_query_local.hdf5 → local descriptors for the queries
+
+dinov2_gallery_local.hdf5 → local descriptors for the database/gallery
+
+nn_dinov2.pkl → precomputed nearest neighbors
+
+gnd_roxford5k.pkl → ground-truth info (which images are correct matches)
+
+test_query.txt, test_gallery.txt → list of image IDs
+----------------
+claude
+I'll continue explaining the complete AMES pipeline and how it works with your specific data format.
+Data Flow Through the Pipeline
+1. Query Image Processing
+Raw Image → OpenCV Load → BGR to RGB → Normalize → DINOv2 → Spatial Attention → Top-700 Features
+Your query image goes through the exact same pipeline that created your gallery features:
+DINOv2 extraction: Produces patch tokens [1, num_patches, 768]
+Spatial reshaping: Converts to 2D spatial grid for attention
+Spatial attention: Learns which patches are most important
+Top-k selection: Picks the 700 most salient patches
+Feature formatting: Creates [700, 773] format matching your HDF5
+2. Gallery Data Structure
+Your HDF5 files contain features in this format:
+Shape: [num_images, 700, 773]
+Where 773 = [x, y, scale_encoding, mask, attention_weight] + [768 DINOv2 features]
+The pipeline extracts only the last 768 dimensions for AMES processing.
+3. AMES Similarity Computation
+python
+# For each gallery image:
+query_feat = [1, 700, 768]    # Your query
+gallery_feat = [1, 700, 768] # One gallery image
+similarity = ames_model(src_local=query_feat, tgt_local=gallery_feat)
+AMES uses transformer cross-attention to match local patches between images.
+Why This Approach Works
+Feature Consistency
+Both query and gallery use identical extraction:
+Same DINOv2 model (dinov2_vitb14_reg)
+Same spatial attention detector
+Same top-k selection (700 patches)
+Same normalization and preprocessing
+AMES Compatibility
+The model expects local features in [batch, patches, 768] format, which is exactly what we provide after extracting the feature dimensions from your HDF5 data.
+Troubleshooting Common Issues
+If you get import errors:
+Make sure models/ames.py exists in your codebase
+The spatial attention module is provided above
+Check that all required packages are installed
+If similarities seem wrong:
+Verify your HDF5 data loads correctly
+Check that query features have the right shape [700, 773]
+Ensure AMES model loads proper weights
+If processing is slow:
+The pipeline processes gallery images in batches of 50. For 4,993 gallery images, this will take several minutes on GPU.
+Expected Results Format
+When you run the pipeline, you should see:
+SEARCH RESULTS
+==============
+Query image: ashmolean_000063.jpg
+Gallery size: 4993
+Global max similarity: 0.8234
+Global mean similarity: 0.1567
+Top 5 matches:
+Rank  1: ashmolean_000063.jpg | Score: 0.8234
+Rank  2: ashmolean_000064.jpg | Score: 0.6891  
+Rank  3: ...
+This gives you the exact functionality you wanted: take any image from your jpg folder, extract features using the same method as your pre-computed gallery, and find the best matches using AMES.
+The key insight is that feature extraction consistency is crucial - both query and gallery must use identical processing for AMES to work properly.
+
+
+
+
+
+   '''
+    # Check for JSON config file option
+    launch_config_path = r"C:\github\ames\ames\.vscode\launch_workers0.json"
+    use_json_config = os.path.exists(launch_config_path)
+    
+    if use_json_config:
+        print(f"Loading configuration from: {launch_config_path}")
+        cfg = load_config_from_json(launch_config_path)
+        
+        # Run main with JSON config
+        result = main(cfg)
+        print(f"mAP result: {result}")
+        
+    else:
+        # For debugging - manual config
+        if True:  # Set to True for debugging
+            from omegaconf import OmegaConf
+            
+            # Create manual config for debugging
+            cfg = OmegaConf.create({
+                'desc_name': 'dinov2',
+                'test_dataset': {
+                    'name': 'roxford5k',
+                    'desc_dir': 'data/roxford5k',
+                    'test_gnd_file': 'gnd_roxford5k.pkl',
+                    'nn_file': 'nn_dinov2.pkl',
+                    'db_desc_num': 700,
+                    'query_desc_num': 700,
+                    'batch_size': 1,
+                    'pin_memory': True,
+                    'lamb': [0.0, 1.0, 2.0],
+                    'temp': [0.5, 1.0, 2.0],
+                    'num_rerank': [100, 200, 500]
+                },
+                'num_workers': 0,
+                'cpu': False,
+                'seed': 42,
+                'dim_local_features': 768,
+                'model_path': 'dinov2_ames.pt',
+                'model': {}
+            })
+            
+            # Run main with manual config
+            result = main(cfg)
+            print(f"mAP result: {result}")
+        else:
+            # Normal hydra execution
+            main()  
+            

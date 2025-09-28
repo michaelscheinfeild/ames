@@ -48,6 +48,7 @@ def main(cfg: DictConfig):
 
     query_loader, gallery_loader = get_test_loaders(cfg.desc_name, cfg.test_dataset, cfg.num_workers)
 
+
     model = AMES(desc_name=cfg.desc_name, local_dim=cfg.dim_local_features, pretrained=cfg.model_path if not os.path.exists(cfg.model_path) else None, **cfg.model)
 
     if os.path.exists(cfg.model_path):
@@ -101,52 +102,4 @@ if __name__ == '__main__':
     ]
     main()
     print(f"Evaluation result: {result}")
-	'''
-	# Check for JSON config file option
-    launch_config_path = r"C:\github\ames\ames\.vscode\launch_workers0.json"
-    use_json_config = os.path.exists(launch_config_path)
-    
-    if use_json_config:
-        print(f"Loading configuration from: {launch_config_path}")
-        cfg = load_config_from_json(launch_config_path)
-        
-        # Run main with JSON config
-        result = main(cfg)
-        print(f"mAP result: {result}")
-        
-    else:
-        # For debugging - manual config
-        if True:  # Set to True for debugging
-            from omegaconf import OmegaConf
-            
-            # Create manual config for debugging
-            cfg = OmegaConf.create({
-                'desc_name': 'dinov2',
-                'test_dataset': {
-                    'name': 'roxford5k',
-                    'desc_dir': 'data/roxford5k',
-                    'test_gnd_file': 'gnd_roxford5k.pkl',
-                    'nn_file': 'nn_dinov2.pkl',
-                    'db_desc_num': 700,
-                    'query_desc_num': 700,
-                    'batch_size': 1,
-                    'pin_memory': True,
-                    'lamb': [0.0, 1.0, 2.0],
-                    'temp': [0.5, 1.0, 2.0],
-                    'num_rerank': [100, 200, 500]
-                },
-                'num_workers': 0,
-                'cpu': False,
-                'seed': 42,
-                'dim_local_features': 768,
-                'model_path': 'dinov2_ames.pt',
-                'model': {}
-            })
-            
-            # Run main with manual config
-            result = main(cfg)
-            print(f"mAP result: {result}")
-        else:
-            # Normal hydra execution
-            main()  
-	'''
+

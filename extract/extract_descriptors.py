@@ -1,24 +1,25 @@
 import argparse
 import os
+import sys
 import pickle
 from functools import partial
 
 import torch
 from torch.utils.data import SequentialSampler, BatchSampler
 
-
+'''
 from .extract_dino import extract as extract_dino, load_dinov2
 from .extract_cvnet import extract as extract_cvnet, load_cvnet
 from .image_dataset import read_imlist, DataSet, FeatureStorage
 from .spatial_attention_2d import SpatialAttention2d
 '''
-from extract_dino import extract as extract_dino, load_dinov2
-from extract_cvnet import extract as extract_cvnet, load_cvnet
-from image_dataset import read_imlist, DataSet, FeatureStorage
-from spatial_attention_2d import SpatialAttention2d
-'''
+from extract.extract_dino import extract as extract_dino, load_dinov2
+from extract.extract_cvnet import extract as extract_cvnet, load_cvnet
+from extract.image_dataset import read_imlist, DataSet, FeatureStorage
+from extract.spatial_attention_2d import SpatialAttention2d
 
-import sys
+
+
 
 _BASE_URL = 'http://ptak.felk.cvut.cz/personal/sumapave/public/ames/networks/'
 
@@ -95,6 +96,7 @@ def main():
 
 
 if __name__ == "__main__":
+
     #  $env:PYTHONPATH = "C:\gitRepo\ames;" + $env:PYTHONPATH
     '''
     What Will Happen
@@ -164,6 +166,42 @@ if __name__ == "__main__":
     '''
 
 
-    main()
+    #main()
 
+    # Add project root to Python path
+
+
+
+    '''
+    cd C:\gitRepo\ames
+
+    # Set Python path (Windows PowerShell)
+    $env:PYTHONPATH = "C:\gitRepo\ames;" + $env:PYTHONPATH
+
+    # Run the extraction
+    python extract/extract_descriptors.py
+
+
+    we should se out
+    C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5
+
+    # Shape: (1, 600, 773)
+    # 1 image: all_souls_000013.jpg
+    # 600 patches per image  
+    # 773 dimensions per patch:
+    #   - [0:5]: metadata [x, y, scale, mask, attention_weight]
+    #   - [5:773]: DINOv2 features (768 dimensions)
+
+
+    verify
+
+
+    🎯 Summary of What We're Doing
+    -Extract features for 1 image: all_souls_000013.jpg
+    -Use DINOv2 backbone: Non-binary, 768-dim features
+    -Local descriptors only: No global features needed
+    -600 patches per image: Good balance of detail vs speed
+    -Save to standard location: Compatible with AMES evaluation
+
+    '''
    

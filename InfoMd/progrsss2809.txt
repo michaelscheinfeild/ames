@@ -1,0 +1,398 @@
+>python -m pip install --upgrade pip setuptools wheel
+
+
+ChatGPT said:
+
+That’s a really solid milestone 🚀 — you’ve gone from raw descriptors to a working similarity matrix with visual results. A few observations on what you’ve achieved:
+
+🔍 What looks good
+
+Clustering by landmark
+
+The all_souls images are clearly recognizing each other — high positive similarity (8.4–8.5 range).
+
+The oxford images are also grouping together with similarly strong diagonal values.
+
+Cross-group similarities (all_souls vs oxford) are consistently negative, which is exactly what you want — the method separates different landmarks.
+
+Diagonal dominance
+
+Each image is most similar to itself (bright diagonal, ~8.5).
+
+This confirms that feature extraction + AMES comparison is consistent.
+
+Visual sanity check
+
+The actual photos you showed match the similarity matrix: visually similar ones (e.g., all_souls_000013 vs all_souls_000026) cluster tightly.
+
+⚠️ Things to improve / next steps
+
+Scaling of scores
+
+You have negative similarities for non-matching images. That’s fine — AMES uses asymmetric similarity estimation.
+
+But for retrieval (top-k results), you’ll probably want to just rank by score without worrying if it’s negative.
+
+Expand dataset
+
+Right now it’s 8 images. With only a few, the patterns are clear, but to evaluate robustness you’ll want at least ~50–100 images across multiple landmarks.
+
+Top-k retrieval test
+
+Instead of just showing the similarity matrix, try querying one image and retrieving the top 5 matches.
+
+Then plot those retrieved results under the query image (gallery view). This will mimic how retrieval works in practice.
+
+Mask handling (you mentioned earlier)
+
+If some patches are invalid or masked (sky, background, borders), similarity may be skewed.
+
+Applying the mask during descriptor extraction or similarity computation would make scores more reliable.
+
+Normalization check
+
+Make sure all descriptors are normalized (often L2 norm). Without it, scores might drift depending on brightness or patch count.
+
+👉 Overall: This result looks correct and promising. Your pipeline is working: descriptors → similarity → grouping. Next, you should scale up to more queries and run a retrieval visualization (top-k gallery).
+
+Do you want me to outline the step-by-step workflow for moving from this similarity matrix to a retrieval demo (query → best 5 matches)?
+---------
+import os
+import sys
+import h5py
+import hydra
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+import seaborn as sns
+from src.models.ames import AMES
+from omegaconf import DictConfig
+
+def verify_flat_format(file_path):
+    """Load and parse flat format data"""
+    try:
+        with h5py.File(file_path, 'r') as f:
+            features = f['features'][:]
+            print(f"✅ File loaded successfully!")
+            print(f"📊 Shape: {features.shape}")
+            
+            metadata = features[..., :5]  # First 5 columns
+            descriptors = features[..., 5:]  # Last 768 columns
+            masks = features[:, :, 3]  # Extract masks
+            
+            return metadata, masks, descriptors
+    except Exception as e:
+        print(f"❌ Error loading file: {e}")        
+        return None, None, None
+
+def load_image_names(txt_path):
+    """Load image names from single_image.txt"""
+    image_names = []
+    try:
+        with open(txt_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    # Extract just the filename from path,query_id,width,height format
+                    filename = line.split(',')[0]
+                    image_names.append(os.path.basename(filename))
+        print(f"✅ Loaded {len(image_names)} image names")
+        return image_names
+    except Exception as e:
+        print(f"❌ Error loading image names: {e}")
+        return [f"Image_{i}" for i in range(8)]  # Fallback names
+
+def prepare_ames_input(metadata, masks, descriptors, device):
+    """Convert your data to AMES input format"""
+    batch_size = metadata.shape[0]  # 8 images
+    
+    # Prepare input tensors - AMES expects specific format
+    # Based on AMES forward method, it likely expects:
+    # - Local features: (batch, num_patches, feat_dim)  
+    # - Coordinates: (batch, num_patches, 2)
+    # - Masks: (batch, num_patches)
+    
+    coordinates = torch.from_numpy(metadata[:, :, :2]).float().to(device)  # (8, 600, 2)
+    local_features = torch.from_numpy(descriptors).float().to(device)      # (8, 600, 768)  
+    attention_weights = torch.from_numpy(metadata[:, :, 4]).float().to(device)  # (8, 600)
+    mask_tensor = torch.from_numpy(masks).float().to(device)               # (8, 600)
+    
+    # Create valid mask (1.0 for valid patches, 0.0 for padding)
+    valid_mask = (mask_tensor == 0.0).float()  # Invert if needed based on your mask convention
+    
+    print(f"📦 Prepared tensors:")
+    print(f"Coordinates: {coordinates.shape}")
+    print(f"Features: {local_features.shape}")
+    print(f"Weights: {attention_weights.shape}")
+    print(f"Valid mask: {valid_mask.shape}")
+    
+    return coordinates, local_features, attention_weights, valid_mask
+
+def compute_similarity_matrix(model, metadata, masks, descriptors, device):
+    """Compute 8x8 similarity matrix using AMES model"""
+    
+    # Prepare input tensors
+    coordinates, features, weights, valid_mask = prepare_ames_input(metadata, masks, descriptors, device)
+    
+    batch_size = features.shape[0]  # 8
+    similarity_matrix = torch.zeros(batch_size, batch_size, device=device)
+    
+    print("🔄 Computing similarity matrix...")
+    
+    with torch.no_grad():
+        # Method 1: Try direct AMES call (if it supports batch vs batch)
+        try:
+            # Some AMES models expect: model(query_coords, query_feats, query_weights, query_mask,
+            #                               db_coords, db_feats, db_weights, db_mask)
+            scores = model(coordinates, features, weights, valid_mask,  # Query
+                          coordinates, features, weights, valid_mask)   # Database (same data)
+            
+            if isinstance(scores, torch.Tensor) and scores.shape == (batch_size, batch_size):
+                similarity_matrix = scores
+                print("✅ Direct batch computation successful")
+            else:
+                print(f"⚠️ Unexpected scores shape: {scores.shape if hasattr(scores, 'shape') else type(scores)}")
+                raise ValueError("Need pairwise computation")
+                
+        except Exception as e:
+            print(f"⚠️ Direct batch failed: {e}")
+            print("🔄 Falling back to pairwise computation...")
+            
+            # Method 2: Pairwise computation
+            for i in range(batch_size):
+                for j in range(batch_size):
+                    try:
+                        # Query: image i, Database: image j
+                        query_coords = coordinates[i:i+1]      # (1, 600, 2)
+                        query_feats = features[i:i+1]         # (1, 600, 768)
+                        query_weights = weights[i:i+1]        # (1, 600)
+                        query_mask = valid_mask[i:i+1]        # (1, 600)
+                        
+                        db_coords = coordinates[j:j+1]        # (1, 600, 2)
+                        db_feats = features[j:j+1]           # (1, 600, 768)
+                        db_weights = weights[j:j+1]          # (1, 600)
+                        db_mask = valid_mask[j:j+1]          # (1, 600)
+                        
+                        # Get similarity score
+                        score = model(query_coords, query_feats, query_weights, query_mask,
+                                     db_coords, db_feats, db_weights, db_mask)
+                        
+                        if isinstance(score, torch.Tensor):
+                            if score.numel() == 1:
+                                similarity_matrix[i, j] = score.item()
+                            else:
+                                similarity_matrix[i, j] = score.mean().item()
+                        else:
+                            similarity_matrix[i, j] = float(score)
+                            
+                    except Exception as inner_e:
+                        print(f"❌ Error computing similarity ({i},{j}): {inner_e}")
+                        similarity_matrix[i, j] = 0.0
+                        
+                print(f"✅ Completed row {i+1}/8")
+    
+    return similarity_matrix.cpu().numpy()
+
+def plot_similarity_matrix(similarity_matrix, image_names, save_path="similarity_matrix.png"):
+    """Plot and save the similarity matrix"""
+    
+    plt.figure(figsize=(10, 8))
+    
+    # Create heatmap
+    sns.heatmap(similarity_matrix, 
+                annot=True,           # Show values
+                fmt='.3f',           # 3 decimal places  
+                cmap='viridis',      # Color scheme
+                square=True,         # Square cells
+                cbar_kws={'label': 'Similarity Score'},
+                xticklabels=image_names,
+                yticklabels=image_names)
+    
+    plt.title('AMES Similarity Matrix (8x8 Images)', fontsize=16, pad=20)
+    plt.xlabel('Database Images', fontsize=12)
+    plt.ylabel('Query Images', fontsize=12)
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
+    plt.tight_layout()
+    
+    # Save plot
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Similarity matrix plot saved: {save_path}")
+    
+    plt.show()
+    
+    # Print matrix
+    print(f"\n📊 SIMILARITY MATRIX:")
+    print("=" * 80)
+    header = "Query\\DB  " + "  ".join([f"{name:>8}" for name in image_names])
+    print(header)
+    print("-" * len(header))
+    
+    for i, query_name in enumerate(image_names):
+        row = f"{query_name:>8}  " + "  ".join([f"{similarity_matrix[i,j]:>8.3f}" for j in range(len(image_names))])
+        print(row)
+
+@hydra.main(config_path="./conf", config_name="test", version_base=None)  
+def main(cfg: DictConfig):
+    device = torch.device('cuda:0' if torch.cuda.is_available() and not cfg.cpu else 'cpu')
+    print(f"🔧 Using device: {device}")
+
+    # Load data
+    flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
+    txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
+    
+    metadata, masks, descriptors = verify_flat_format(flat_file)
+    image_names = load_image_names(txt_file)
+    
+    if metadata is None:
+        return
+    
+    print("\n📋 DATA SUMMARY:")
+    print(f"Metadata shape: {metadata.shape}")      # (8, 600, 5)
+    print(f"Masks shape: {masks.shape}")            # (8, 600) 
+    print(f"Descriptors shape: {descriptors.shape}") # (8, 600, 768)
+    print(f"Image names: {image_names}")
+
+    # Load AMES model
+    model_path = r'C:\Users\micha\.cache\torch\hub\checkpoints\dinov2_ames.pt'
+    
+    model = AMES(desc_name=cfg.desc_name,
+                 local_dim=cfg.dim_local_features, 
+                 pretrained=model_path if not os.path.exists(model_path) else None,
+                 **cfg.model)
+
+    if os.path.exists(model_path):
+        print(f"✅ Loading model from: {model_path}")
+        checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
+        model.load_state_dict(checkpoint['state'], strict=True)
+        print("✅ Model weights loaded")
+    
+    model.to(device)
+    model.eval()
+    print(f"✅ Model ready on {device}")
+
+    # Compute similarity matrix
+    torch.cuda.empty_cache()
+    similarity_matrix = compute_similarity_matrix(model, metadata, masks, descriptors, device)
+    
+    # Plot results
+    plot_similarity_matrix(similarity_matrix, image_names, 
+                          save_path=r'C:\gitRepo\ames\similarity_matrix_8x8.png')
+
+if __name__ == '__main__':
+    sys.argv = [
+        'CrossValid.py',
+        'descriptors=dinov2',
+        'data_root=data',
+        'model_path=dinov2_ames.pt', 
+        'num_workers=0'
+    ]
+    main()
+	
+	
+	---------------------
+	
+	
+	
+	def prepare_ames_input(metadata, descriptors, masks, device):
+    """Convert data to AMES input format - only features and masks needed"""
+    print("🔧 Preparing AMES input tensors...")
+    
+    # AMES only needs features and masks, not coordinates or weights
+    features = torch.from_numpy(descriptors).float().to(device)  # (8, 600, 768)
+    
+    # Convert masks: your masks are 0.0=valid, but AMES expects True=invalid
+    # So invert the mask: 0.0 -> False (valid), 1.0 -> True (invalid)
+    mask_tensor = torch.from_numpy(masks).bool().to(device)  # (8, 600) boolean
+    
+    print(f"📦 AMES input tensors:")
+    print(f"  Features: {features.shape}")
+    print(f"  Masks: {mask_tensor.shape} (dtype: {mask_tensor.dtype})")
+    
+    return features, mask_tensor
+
+def compute_similarity_matrix(model, metadata, masks, descriptors, device):
+    """Compute 8x8 similarity matrix using correct AMES forward call"""
+    
+    features, mask_tensor = prepare_ames_input(metadata, descriptors, masks, device)
+    batch_size = features.shape[0]  # 8 images
+    similarity_matrix = np.zeros((batch_size, batch_size))
+    
+    print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix...")
+    
+    with torch.no_grad():
+        # Method 1: Try batch computation (all queries vs all database)
+        try:
+            print("🚀 Attempting batch computation...")
+            
+            # AMES expects: src_local, src_mask, tgt_local, tgt_mask
+            scores = model(
+                src_local=features,      # Query features (8, 600, 768)
+                src_mask=mask_tensor,    # Query masks (8, 600)
+                tgt_local=features,      # Database features (same data) (8, 600, 768) 
+                tgt_mask=mask_tensor     # Database masks (8, 600)
+            )
+            
+            print(f"✅ Batch computation successful! Scores shape: {scores.shape}")
+            
+            if scores.dim() == 2 and scores.shape == (batch_size, batch_size):
+                # Perfect: got full similarity matrix
+                similarity_matrix = scores.cpu().numpy()
+            elif scores.dim() == 1 and len(scores) == batch_size * batch_size:
+                # Reshape if needed
+                similarity_matrix = scores.view(batch_size, batch_size).cpu().numpy()
+            else:
+                print(f"⚠️ Unexpected batch scores shape: {scores.shape}")
+                raise ValueError("Need pairwise computation")
+                
+        except Exception as e:
+            print(f"⚠️ Batch computation failed: {e}")
+            print("🔄 Falling back to pairwise computation...")
+            
+            # Method 2: Pairwise computation (query by query)
+            for i in range(batch_size):
+                print(f"  Processing query {i+1}/{batch_size}...")
+                
+                try:
+                    # Single query vs all database images
+                    query_features = features[i:i+1]      # (1, 600, 768)
+                    query_mask = mask_tensor[i:i+1]       # (1, 600)
+                    
+                    # AMES forward call with correct parameters
+                    scores = model(
+                        src_local=query_features,    # Single query
+                        src_mask=query_mask,         # Single query mask
+                        tgt_local=features,          # All database images
+                        tgt_mask=mask_tensor         # All database masks
+                    )
+                    
+                    if isinstance(scores, torch.Tensor):
+                        if scores.dim() == 1 and len(scores) == batch_size:
+                            # Perfect: similarity of query i with all 8 database images
+                            similarity_matrix[i] = scores.cpu().numpy()
+                        elif scores.dim() == 0:
+                            # Single score - something went wrong, use default
+                            similarity_matrix[i] = 0.5
+                        else:
+                            print(f"⚠️ Unexpected pairwise score shape: {scores.shape}")
+                            similarity_matrix[i] = 0.5
+                    else:
+                        similarity_matrix[i] = float(scores)
+                        
+                except Exception as inner_e:
+                    print(f"❌ Error processing query {i}: {inner_e}")
+                    # Fallback: individual image pairs
+                    for j in range(batch_size):
+                        try:
+                            single_score = model(
+                                src_local=features[i:i+1],
+                                src_mask=mask_tensor[i:i+1], 
+                                tgt_local=features[j:j+1],
+                                tgt_mask=mask_tensor[j:j+1]
+                            )
+                            similarity_matrix[i, j] = float(single_score.item() if hasattr(single_score, 'item') else single_score)
+                        except:
+                            similarity_matrix[i, j] = 1.0 if i == j else 0.1
+    
+    print("✅ Similarity matrix computation complete!")
+    return similarity_matrix

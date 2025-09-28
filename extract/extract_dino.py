@@ -3,7 +3,8 @@ import torch
 from tqdm import tqdm
 import torch.nn.functional as F
 
-
+'''
+# micmic
 def fix_query_pos(feature_storage, gnd, im_paths):
     im_sizes = np.asarray([i.split(',')[-2:] for i in im_paths]).astype(int)
     loc = feature_storage.storage['local'][..., :2]
@@ -11,6 +12,93 @@ def fix_query_pos(feature_storage, gnd, im_paths):
     loc = loc * (crops[..., 2:] - crops[..., :2])
     loc = (loc + crops[..., :2]) / im_sizes[:, None]
     feature_storage.storage['local'][..., :2] = loc
+
+def fix_query_pos(feature_storage, gnd, im_paths):
+    im_sizes = np.asarray([i.split(',')[-2:] for i in im_paths]).astype(int)
+    
+    # Load the entire local features array from HDF5
+    local_data = feature_storage.storage['local'][:]  # Load all data first
+    loc = local_data[..., :2]  # Now you can use fancy indexing
+    
+    crops = np.asarray([i['bbx'] for i in gnd])[:, None]
+    loc = loc * (crops[..., 2:] - crops[..., :2])
+    loc = (loc + crops[..., :2]) / im_sizes[:, None]
+    
+    # Update the local data and write back to HDF5
+    local_data[..., :2] = loc
+    feature_storage.storage['local'][:] = local_data  # Write back to HDF5
+
+def fix_query_pos(feature_storage, gnd, im_paths):
+    im_sizes = np.asarray([i.split(',')[-2:] for i in im_paths]).astype(int)
+    
+    # Access HDF5 dataset with proper indexing (no ellipsis)
+    local_dataset = feature_storage.storage['local']
+    loc = local_dataset[:, :, :2]  # Explicit indexing instead of [..., :2]
+    
+    crops = np.asarray([i['bbx'] for i in gnd])[:, None]
+    loc = loc * (crops[..., 2:] - crops[..., :2])
+    loc = (loc + crops[..., :2]) / im_sizes[:, None]
+    
+    # Write back the coordinates
+    local_dataset[:, :, :2] = loc
+'''
+'''
+When you extract features on a cropped query (only bounding box region),
+the feature coordinates are relative to that crop (from 0 to 1 inside the crop).
+
+But when you evaluate queries against the whole dataset, you need those coordinates mapped back to the original full image space.
+
+fix_query_pos performs this remapping:
+
+Scale coordinates by bounding box width/height.
+
+Shift them by bounding box origin (xmin, ymin).
+
+Normalize by the original image size so they’re in [0, 1] relative to the full image.
+
+'''
+# def fix_query_pos(feature_storage, gnd, im_paths):
+#     im_sizes = np.asarray([i.split(',')[-2:] for i in im_paths]).astype(int)
+
+#     # Get the real dataset
+#     local_dataset = feature_storage.storage['local']["features"]
+
+#     # Load into memory
+#     local_data = local_dataset[:]  
+#     loc = local_data[..., :2]
+
+#     # Apply cropping
+#     crops = np.asarray([i['bbx'] for i in gnd])[:, None]
+#     loc = loc * (crops[..., 2:] - crops[..., :2])
+#     loc = (loc + crops[..., :2]) / im_sizes[:, None]
+
+#     # Write back
+#     local_data[..., :2] = loc
+#     local_dataset[:] = local_data
+
+
+def fix_query_pos(feature_storage, gnd, im_paths):
+    # Only take the number of entries that match what's stored
+    n = feature_storage.storage['local']["features"].shape[0]
+
+    im_sizes = np.asarray([i.split(',')[-2:] for i in im_paths[:n]]).astype(int)
+    local_dataset = feature_storage.storage['local']["features"]
+    local_data = local_dataset[:]
+
+    for i in range(n):
+        loc = local_data[i, :, :2]
+        bbx = np.asarray(gnd[i]['bbx'])
+
+        # Scale + shift into full image coords
+        loc = loc * (bbx[2:] - bbx[:2])
+        loc = (loc + bbx[:2]) / im_sizes[i]
+
+        local_data[i, :, :2] = loc
+
+    local_dataset[:] = local_data
+
+
+
 
 def find_divisors(number):
     divisors = np.arange(1, int(np.sqrt(number)) + 1)

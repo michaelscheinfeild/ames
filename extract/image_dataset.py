@@ -40,12 +40,39 @@ class FeatureStorage:
             hdf5_file.create_dataset("features", shape=shape, dtype=np.float32)
             self.storage[desc_type] = hdf5_file
 
+    '''
     def __del__(self):
         for hdf5_file in self.storage.values():
             hdf5_file.close()
+    '''
+    #micmic
+    def __del__(self):
+        """Safely close all HDF5 files"""
+        for desc_type, hdf5_file in self.storage.items():
+            try:
+                if hdf5_file is not None and hdf5_file.id.valid:
+                    hdf5_file.close()
+            except (AttributeError, TypeError, RuntimeError):
+                # Ignore errors during cleanup - file may already be closed
+                pass
+
+    def close(self):
+        """Explicitly close all HDF5 files"""
+        for desc_type, hdf5_file in list(self.storage.items()):
+            try:
+                if hdf5_file is not None and hdf5_file.id.valid:
+                    hdf5_file.close()
+                self.storage[desc_type] = None
+            except (AttributeError, TypeError, RuntimeError):
+                pass
+        self.storage.clear()        
 
     def save(self, feats, save_type):
         if save_type in self.storage:
+            # If feats on GPU, convert to CPU first
+            # micmic torch tensor to numpy array conversion
+            if isinstance(feats, torch.Tensor):
+                feats = feats.cpu().numpy()
             self.storage[save_type]["features"][self.pointer:self.pointer + len(feats)] = feats
 
     def update_pointer(self, size):
