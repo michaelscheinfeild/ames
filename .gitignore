@@ -1,0 +1,13 @@
+# Ignore HDF5 files
+*.hdf5
+
+# Ignore JPEG images
+*.jpg
+*.jpeg
+*.pkl
+*.pyc
+
+
+# folders
+multirun/
+outputs/
