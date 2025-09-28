@@ -1,3 +1,97 @@
+def compute_similarity_matrix(model, metadata, masks, descriptors, device):
+    """Compute 8x8 similarity matrix using individual pairwise comparisons"""
+    
+    # CUDA events for precise GPU timing
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+    
+    # CPU timing as backup
+    cpu_start = time.time()
+    
+    features, mask_tensor = prepare_ames_input(metadata, descriptors, masks, device)
+    batch_size = features.shape[0]  # 8 images
+    similarity_matrix = np.zeros((batch_size, batch_size))
+    
+    print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix...")
+    
+    with torch.no_grad():
+        total_pairs = batch_size * batch_size
+        completed = 0
+        
+        # Individual pairwise computation: query i vs database j
+        for i in range(batch_size):
+            for j in range(batch_size):
+                try:
+                    query_features = features[i:i+1]
+                    query_mask = mask_tensor[i:i+1]
+                    db_features = features[j:j+1]
+                    db_mask = mask_tensor[j:j+1]
+                    
+                    # AMES forward call
+                    score = model(
+                        src_local=query_features,
+                        src_mask=query_mask,
+                        tgt_local=db_features,
+                        tgt_mask=db_mask
+                    )
+                    
+                    if isinstance(score, torch.Tensor):
+                        similarity_matrix[i, j] = score.item() if score.numel() == 1 else score.mean().item()
+                    else:
+                        similarity_matrix[i, j] = float(score)
+                    
+                    completed += 1
+                        
+                except Exception as pair_error:
+                    print(f"❌ Error at ({i},{j}): {str(pair_error)[:100]}...")
+                    similarity_matrix[i, j] = 1.0 if i == j else 0.1
+                    completed += 1
+    
+    # Calculate timing
+    cpu_time = time.time() - cpu_start
+    
+    if device.type == 'cuda':
+        end_event.record()
+        torch.cuda.synchronize()
+        gpu_time = start_event.elapsed_time(end_event) / 1000.0  # Convert to seconds
+        
+        print(f"⏱️  CPU time: {cpu_time:.2f} seconds")
+        print(f"⏱️  GPU time: {gpu_time:.2f} seconds")
+        print(f"📊 Average GPU time per pair: {gpu_time/total_pairs:.3f} seconds")
+    else:
+        print(f"⏱️  Total time: {cpu_time:.2f} seconds")
+        print(f"📊 Average time per pair: {cpu_time/total_pairs:.3f} seconds")
+    
+    print(f"✅ Similarity matrix computation complete!")
+    return similarity_matrix
+
+class AMESWithGlobal(nn.Module):
+    def __init__(self, ames_model, lambda_weight=0.5):
+        super().__init__()
+        self.ames = ames_model
+        self.lambda_weight = lambda_weight
+        
+    def forward(self, src_local, src_mask, tgt_local, tgt_mask, 
+                src_global=None, tgt_global=None):
+        
+        # Local similarity using AMES
+        local_sim = self.ames(src_local, src_mask, tgt_local, tgt_mask)
+        
+        if src_global is not None and tgt_global is not None:
+            # Global similarity (cosine similarity)
+            global_sim = F.cosine_similarity(src_global, tgt_global, dim=-1)
+            
+            # Combine with lambda
+            final_sim = self.lambda_weight * global_sim + (1 - self.lambda_weight) * local_sim
+            return final_sim
+        else:
+            return local_sim
+
+
+
 if all_local.dtype in (np.float32, np.float16):
     local_feat = all_local[:, :self.desc_num, 5:]     # Features: last 768 dims
     metadata = all_local[:, :self.desc_num, :5]      # Metadata: first 5 dims
