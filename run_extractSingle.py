@@ -1,7 +1,7 @@
 '''
 
     🎯 Summary of What We're Doing
-    -Extract features for 1 image: all_souls_000013.jpg
+    -Extract features for N images: all_souls_000013.jpg ...
     -Use DINOv2 backbone: Non-binary, 768-dim features
     -Local descriptors only: No global features needed
     -600 patches per image: Good balance of detail vs speed
@@ -12,6 +12,10 @@ import sys
 from pathlib import Path
 
 from extract import extract_descriptors
+
+import gc
+
+gc.collect()
 
 # Disable HDF5 file locking for Windows
 os.environ['HDF5_USE_FILE_LOCKING'] = 'FALSE'
@@ -25,10 +29,10 @@ if str(repo_root) not in sys.path:
 # --- Configuration for single Oxford image extraction ---
 dataset_name = 'roxford5k'
 backbone = 'dinov2'
-save_path = r'C:\gitRepo\ames\data'
-data_path = r'C:\gitRepo\ames\data\roxford5k'  # Root path where jpg folder is
+save_path = r'C:\github\ames\ames\data'
+data_path = r'C:\github\ames\ames\data\roxford5k'  # Root path where jpg folder is
 split = '_query'  # Using query split since we're processing a query image
-file_name = 'single_image.txt'  # The file we created with just one image
+file_name = 'test_query_100.txt'  # The file we created with just one image
 #desc_type = 'local'  # Only local features
 desc_type = 'local,global'
 top_k = 600  # Extract 600 patches

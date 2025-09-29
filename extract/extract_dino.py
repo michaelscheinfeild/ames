@@ -163,7 +163,8 @@ def extract_features(model, detector, test_loader, feature_storage, ps=14, topk=
 
         for i, (im_list, scale_list) in enumerate(tqdm(test_loader, mininterval=10)):
             global_features, global_cls_features, local_features, local_weights = [], [], [], []
-
+            #micmic
+            print(f"Processing batch {i+1}/{len(test_loader)} with {len(im_list)} images.")
             for idx in range(len(im_list)):
                 im = im_list[idx][:, [2, 1, 0]].cuda()
                 cls, feats, weights = model(im)

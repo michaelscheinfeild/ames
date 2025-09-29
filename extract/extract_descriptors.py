@@ -71,12 +71,24 @@ def main():
         cpt = torch.hub.load_state_dict_from_url(f'{_BASE_URL}/{args.backbone}_detector.pt')
         detector.load_state_dict(cpt['state'], strict=True)
 
+    # Handle ground truth for query sets if applicable
+    # micmic
+    gnd = None
     if args.split == '_query' and dataset in ['roxford5k', 'rparis6k', 'instre']:
-        with open(os.path.join(args.data_path, f'gnd_{dataset.lower()}.pkl'), 'rb') as fin:
-            gnd = pickle.load(fin)['gnd']
-        dataset = DataSet(dataset, args.data_path, scale_list, im_paths, imsize=imsize, gnd=gnd, patch_size=ps)
-    else:
-        dataset = DataSet(dataset, args.data_path, scale_list, im_paths, imsize=imsize, patch_size=ps)
+        gnd_file = os.path.join(args.data_path, f'gnd_{dataset.lower()}.pkl')
+        if os.path.exists(gnd_file):
+            try:
+                with open(gnd_file, 'rb') as fin:
+                    gnd = pickle.load(fin)['gnd']
+                print(f"Loaded ground truth from: {gnd_file}")
+            except Exception as e:
+                print(f"Warning: Failed to load ground truth file {gnd_file}: {e}")
+                gnd = None
+        else:
+            print(f"Warning: Ground truth file not found: {gnd_file}")
+            print("Proceeding without ground truth (full images will be used)")
+
+    dataset = DataSet(dataset, args.data_path, scale_list, im_paths, imsize=imsize, gnd=gnd, patch_size=ps)
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
@@ -204,4 +216,3 @@ if __name__ == "__main__":
     -Save to standard location: Compatible with AMES evaluation
 
     '''
-   

@@ -35,7 +35,10 @@ class FeatureStorage:
         self.storage = {}
 
         for desc_type in save_type:
-            hdf5_file = h5py.File(os.path.join(save_dir, f'{desc_name}{split}_{desc_type}{extension}.hdf5'), 'w')
+            fnameSave=os.path.normpath(os.path.join(save_dir, f'{desc_name}{split}_{desc_type}{extension}.hdf5'))
+            print(f"Creating HDF5 file: {fnameSave}")
+            # h5py.File(path, "r", libver="latest", swmr=True)   # For reading with SWMR multithrea
+            hdf5_file = h5py.File(fnameSave, 'w')
             shape = [dataset_size, topk, local_desc_dim + 5] if desc_type == 'local' else [dataset_size, global_desc_dim]
             hdf5_file.create_dataset("features", shape=shape, dtype=np.float32)
             self.storage[desc_type] = hdf5_file
