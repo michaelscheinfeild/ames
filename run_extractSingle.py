@@ -83,4 +83,11 @@ print("📋 Data format: [1 image, 600 patches, 5 metadata + 768 features]")
 use local,global
 📊 Expected shape: (Nimg, 600, 773)
 📋 Data format: [Nimg image, 600 patches, 5 metadata + 768 features]
+
+
+ 29/9
+🎉 EXTRACTION COMPLETE!
+✅ Output file: C:\github\ames\ames\data/roxford5k/dinov2_query_local.hdf5
+📊 Expected shape: (Nimg, 600, 773)
+📋 Data format: [1 image, 600 patches, 5 metadata + 768 features]
 '''

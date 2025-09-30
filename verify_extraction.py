@@ -1,7 +1,7 @@
 '''
 after extract printed 
 🎉 EXTRACTION COMPLETE!
-✅ Output file: C:\gitRepo\ames\data/roxford5k/dinov2_query_local.hdf5
+✅ Output file: C:\\gitRepo\\ames\\data\\roxford5k\\dinov2_query_local.hdf5
 📊 Expected shape: (1, 600, 773)
 📋 Data format: [1 image, 600 patches, 5 metadata + 768 features]
 
@@ -53,8 +53,8 @@ def verify_global_format(global_file=None):
             print(f"🔢 Min value: {features.min():.4f}")
             print(f"🔢 Max value: {features.max():.4f}")
             
-            # Check if it's a single image (should be shape (1, 768))
-            if len(features.shape) == 2 and features.shape[0] == 1:
+            # Check if it's a single image (should be shape (Nimgas, 768))
+            if len(features.shape) == 2: #and features.shape[0] == 100:
                 print(f"\n🎯 GLOBAL FEATURES ANALYSIS:")
                 print(f"Number of images: {features.shape[0]}")
                 print(f"Feature dimensions: {features.shape[1]} (should be 768 for DINOv2)")
@@ -232,9 +232,9 @@ def verify_structured_format():
     except Exception as e:
         print(f"❌ Error loading file: {e}")
 
-def verify_flat_format():
+def verify_flat_format(file_path):
     """Handle flat array format (your single image extraction)"""
-    file_path = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
+  
     
     try:
         with h5py.File(file_path, 'r') as f:
@@ -259,10 +259,11 @@ def verify_flat_format():
             
             print(f"\n🎭 MASK ANALYSIS:")
             print(f"Total patches: {len(masks)}")
+            print(f"Mask Shape: {masks.shape} ")
             print(f"Valid patches (mask=0.0): {np.sum(masks == 0.0)}")
             print(f"Invalid/padding patches (mask=1.0): {np.sum(masks == 1.0)}")
             print(f"Unique mask values: {np.unique(masks)}")
-            print(f"All masks: {masks}")
+            #print(f"All masks: {masks}")
             
     except Exception as e:
         print(f"❌ Error loading file: {e}")
@@ -305,9 +306,13 @@ def auto_detect_and_verify(file_path):
 
 if __name__ == '__main__':
 
-    global_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_global.hdf5'
+    global_file = r'C:\github\ames\ames\data\roxford5k\dinov2_query_global.hdf5'
     print("=== GLOBAL FEATURES INSPECTION ===")
     verify_global_format(global_file)
+
+    print("=== LOCAL FEATURES INSPECTION ===")
+    file_path = r'C:\github\ames\ames\data\roxford5k\dinov2_query_local.hdf5'
+    verify_flat_format(file_path)
     '''
     📊 Global vector statistics:
     Vector shape: (768,)
@@ -325,9 +330,9 @@ if __name__ == '__main__':
         print("=== STRUCTURED FORMAT (Big Data) ===")
         verify_structured_format()
     
-    print("\n" + "="*50)
-    print("=== FLAT FORMAT (Single Image) ===")
-    verify_flat_format()
+    #print("\n" + "="*50)
+    #print("=== FLAT FORMAT (Single Image) ===")
+    #verify_flat_format()
     
     if 0:
         print("\n" + "="*50)
@@ -344,8 +349,8 @@ import numpy as np
 
 # for single query
 def verify_extraction():
-    #file_path = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
-    file_path = r'C:\gitRepo\ames\data\roxford5k-Copy\dinov2_query_local.hdf5'
+    #file_path = r'C:\\gitRepo\\ames\data\\roxford5k\\dinov2_query_local.hdf5'
+    file_path = r'C:\\gitRepo\\ames\\data\\roxford5k-Copy\\dinov2_query_local.hdf5'
     
     
     try:
@@ -400,5 +405,46 @@ Descriptor shape: (1, 600, 768)
 📋 Data type: [('metadata', '<f4', (700, 5)), ('descriptor', '<f2', (700, 768))]
 🔧 Detected: STRUCTURED ARRAY (Format 2)
 Fields: ('metadata', 'descriptor')
+
+
+#  100 images data 
+=== GLOBAL FEATURES INSPECTION ===
+✅ Global file loaded successfully!
+📊 Shape: (100, 768)
+📋 Data type: float32
+🔢 Min value: -0.1683
+🔢 Max value: 0.1578
+
+🎯 GLOBAL FEATURES ANALYSIS:
+Number of images: 100
+Feature dimensions: 768 (should be 768 for DINOv2)
+
+📊 Global vector statistics:
+Vector shape: (768,)
+L2 norm: 1.0000
+Mean value: -0.0013
+Std deviation: 0.0361
+First 10 values: [ 0.00383233  0.02041093 -0.00424409  0.04764554 -0.00930367 -0.02265768
+ -0.01055966 -0.03846767  0.04104835  0.06461921]
+Last 10 values: [-0.10460254 -0.03288346  0.00447496  0.04956827 -0.03331695 -0.00044723
+  0.04134625 -0.00041686 -0.02936008  0.02806727]
+Is L2 normalized: ✅ (norm = 1.000000)
+Zero values: 0 / 768
+=== LOCAL FEATURES INSPECTION ===
+✅ File loaded successfully!
+📊 Shape: (100, 600, 773)
+📋 Data type: float32
+
+📊 FLAT ARRAY FORMAT:
+Metadata shape: (100, 600, 5)
+Descriptor shape: (100, 600, 768)
+
+🎭 MASK ANALYSIS:
+Total patches: 600
+Mask Shape: (600,)
+Valid patches (mask=0.0): 600
+Invalid/padding patches (mask=1.0): 0
+Unique mask values: [0.]
+
 
 '''

@@ -8,17 +8,125 @@ import time  # Add this to your imports
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.image as mpimg
+from PIL import Image
 
 from   src.models.ames import AMES
 from omegaconf import DictConfig
 
+
+def create_individual_similarity_plots(similarity_matrix, image_names, save_path_folder, 
+                                     image_folder_path, top_k=5):
+    """
+    Create individual plots for each image showing top-k most similar images
+    
+    Args:
+        similarity_matrix: (N, N) numpy array of similarity scores
+        image_names: List of image filenames
+        save_path_folder: Output folder (e.g., 'C:\\github\\Results100')
+        image_folder_path: Path to folder containing the actual images
+        top_k: Number of top similar images to show (default 5)
+    """
+    
+    # Create output directory
+    os.makedirs(save_path_folder, exist_ok=True)
+    print(f"📁 Creating similarity plots in: {save_path_folder}")
+    
+    num_images = len(image_names)
+    
+    for query_idx in range(num_images):
+        query_name = image_names[query_idx]
+        query_base_name = os.path.splitext(query_name)[0]  # Remove extension
+        
+        print(f"🖼️  Processing {query_idx+1}/{num_images}: {query_name}")
+        
+        # Get similarity scores for this query image
+        similarities = similarity_matrix[query_idx]
+        
+        # Get top-k most similar images (excluding self)
+        # Sort indices by similarity score in descending order
+        sorted_indices = np.argsort(similarities)[::-1]
+        
+        # Filter out self-similarity and get top-k
+        top_indices = []
+        for idx in sorted_indices:
+            if idx != query_idx:  # Skip self
+                top_indices.append(idx)
+            if len(top_indices) >= top_k:
+                break
+        
+        # Create the plot
+        fig, axes = plt.subplots(1, top_k + 1, figsize=(18, 4))
+        fig.suptitle(f'Query: {query_name} - Top {top_k} Most Similar Images', 
+                    fontsize=14, fontweight='bold')
+        
+        # Plot query image (leftmost)
+        try:
+            query_img_path = os.path.join(image_folder_path, query_name)
+            if os.path.exists(query_img_path):
+                img = Image.open(query_img_path)
+                axes[0].imshow(img)
+                axes[0].set_title(f'QUERY\n{query_name}\n(Self: {similarities[query_idx]:.3f})', 
+                                fontsize=10, fontweight='bold', color='red')
+                axes[0].axis('off')
+            else:
+                axes[0].text(0.5, 0.5, f'Query Image\nNot Found\n{query_name}', 
+                           ha='center', va='center', transform=axes[0].transAxes)
+                axes[0].set_title('QUERY (Not Found)', fontsize=10, color='red')
+                axes[0].axis('off')
+        except Exception as e:
+            axes[0].text(0.5, 0.5, f'Error Loading\n{query_name}', 
+                       ha='center', va='center', transform=axes[0].transAxes)
+            axes[0].set_title(f'QUERY (Error)', fontsize=10, color='red')
+            axes[0].axis('off')
+        
+        # Plot top-k similar images
+        for i, similar_idx in enumerate(top_indices):
+            similar_name = image_names[similar_idx]
+            similar_score = similarities[similar_idx]
+            
+            try:
+                similar_img_path = os.path.join(image_folder_path, similar_name)
+                if os.path.exists(similar_img_path):
+                    img = Image.open(similar_img_path)
+                    axes[i + 1].imshow(img)
+                    axes[i + 1].set_title(f'#{i+1}\n{similar_name}\nScore: {similar_score:.3f}', 
+                                        fontsize=9)
+                    axes[i + 1].axis('off')
+                else:
+                    axes[i + 1].text(0.5, 0.5, f'Image\nNot Found\n{similar_name}', 
+                                   ha='center', va='center', transform=axes[i + 1].transAxes)
+                    axes[i + 1].set_title(f'#{i+1} - Not Found\nScore: {similar_score:.3f}', 
+                                        fontsize=9, color='orange')
+                    axes[i + 1].axis('off')
+            except Exception as e:
+                axes[i + 1].text(0.5, 0.5, f'Error\n{similar_name}', 
+                               ha='center', va='center', transform=axes[i + 1].transAxes)
+                axes[i + 1].set_title(f'#{i+1} - Error\nScore: {similar_score:.3f}', 
+                                    fontsize=9, color='red')
+                axes[i + 1].axis('off')
+        
+        # Save the plot
+        output_filename = f"{query_base_name}_similarity_top{top_k}.jpg"
+        output_path = os.path.join(save_path_folder, output_filename)
+        
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=150, bbox_inches='tight', 
+                   facecolor='white', edgecolor='none')
+        plt.close()  # Close to free memory
+        
+        print(f"  ✅ Saved: {output_filename}")
+    
+    print(f"\n🎉 All {num_images} similarity plots created successfully!")
+    print(f"📁 Output folder: {save_path_folder}")
+
 def compute_similarity_matrix(model, metadata, masks, descriptors, device):
-    """Compute 8x8 similarity matrix using individual pairwise comparisons"""
+    """Compute NxN similarity matrix using individual pairwise comparisons"""
     
     # Start timing
     start_time = time.time()
     features, mask_tensor = prepare_ames_input(metadata, descriptors, masks, device)
-    batch_size = features.shape[0]  # 8 images
+    batch_size = features.shape[0]  # N images
     similarity_matrix = np.zeros((batch_size, batch_size))
     
     #print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix...")
@@ -54,7 +162,7 @@ def compute_similarity_matrix(model, metadata, masks, descriptors, device):
                         similarity_matrix[i, j] = float(score)
                     
                     completed += 1
-                    if completed % 8 == 0:  # Progress every 8 pairs
+                    if completed % batch_size == 0:  # Progress every batch_size pairs
                         print(f"  Progress: {completed}/{total_pairs} pairs completed")
                         
                 except Exception as pair_error:
@@ -72,6 +180,46 @@ def compute_similarity_matrix(model, metadata, masks, descriptors, device):
     return similarity_matrix
 
 def plot_similarity_matrix(similarity_matrix, image_names, save_path="similarity_matrix.png"):
+    """Plot similarity matrix optimized for 100 images"""
+    
+    num_images = len(image_names)
+    
+    # Create figure
+    plt.figure(figsize=(16, 14))
+    
+    # Create heatmap without text annotations (too crowded for 100x100)
+    sns.heatmap(similarity_matrix, 
+                cmap='viridis',
+                square=True,
+                cbar_kws={'label': 'Similarity Score'},
+                xticklabels=False,  # Don't show all 100 names
+                yticklabels=False)  # Don't show all 100 names
+    
+    plt.title(f'AMES Similarity Matrix ({num_images}x{num_images} Images)', fontsize=16, pad=20)
+    plt.xlabel('Database Images (0-99)', fontsize=12)
+    plt.ylabel('Query Images (0-99)', fontsize=12)
+    
+    # Add some tick marks for reference
+    tick_positions = range(0, num_images, 10)  # Every 10th image
+    plt.xticks(tick_positions, [str(i) for i in tick_positions])
+    plt.yticks(tick_positions, [str(i) for i in tick_positions])
+    
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"✅ Similarity matrix plot saved: {save_path}")
+    plt.close()
+    
+    # Create separate mapping file
+    mapping_path = save_path.replace('.png', '_image_mapping.txt')
+    with open(mapping_path, 'w') as f:
+        f.write("Image Index to Name Mapping:\n")
+        f.write("=" * 60 + "\n")
+        for i, name in enumerate(image_names):
+            f.write(f"{i:3d}: {name}\n")
+    
+    print(f"✅ Image index mapping saved: {mapping_path}")
+
+def plot_similarity_matrix_8_8(similarity_matrix, image_names, save_path="similarity_matrix.png"):
     """Plot and save the similarity matrix"""
     
     plt.figure(figsize=(10, 8))
@@ -145,6 +293,43 @@ def prepare_ames_input(metadata, descriptors, masks, device):
     
     return features, mask_tensor  
 
+
+# Usage function to integrate with your existing code
+def process_similarity_results(similarity_matrix, image_names, save_path_folder, 
+                             image_folder_path, top_k=5):
+    """
+    Complete function to process similarity results and create all plots
+    
+    Args:
+        similarity_matrix: (N, N) numpy array from compute_similarity_matrix()
+        image_names: List of image names from load_image_names()
+        save_path_folder: Output folder path (e.g., 'C:\\github\\Results100')
+        image_folder_path: Path to folder containing actual image files
+        top_k: Number of top similar images to show per query
+    """
+    
+    print(f"\n🚀 PROCESSING SIMILARITY RESULTS")
+    print(f"📊 Matrix size: {similarity_matrix.shape[0]}x{similarity_matrix.shape[1]}")
+    print(f"🖼️  Number of images: {len(image_names)}")
+    print(f"📁 Output folder: {save_path_folder}")
+    print(f"🖼️  Image source folder: {image_folder_path}")
+    print(f"🔝 Top-K similar images per query: {top_k}")
+    
+    # Create individual similarity plots
+    create_individual_similarity_plots(
+        similarity_matrix=similarity_matrix,
+        image_names=image_names,
+        save_path_folder=save_path_folder,
+        image_folder_path=image_folder_path,
+        top_k=top_k
+    )
+    
+    # Also create the overall similarity matrix plot
+    overall_plot_path = os.path.join(save_path_folder, "overall_similarity_matrix.png")
+    plot_similarity_matrix(similarity_matrix, image_names, save_path=overall_plot_path)
+    
+    print(f"\n✅ PROCESSING COMPLETE!")
+
 def verify_flat_format(file_path):
     """Handle flat array format (your single image extraction)"""
     # file_path = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
@@ -186,14 +371,18 @@ def verify_flat_format(file_path):
 
 
  #--------------------
+ # to do use global_file too
+ # todo use data loader batches 
 @hydra.main(config_path="./conf", config_name="test", version_base=None)
 def main(cfg: DictConfig):
       
       device = torch.device('cuda:0' if torch.cuda.is_available() and not cfg.cpu else 'cpu')
       print(f"🔧 Using device: {device}")
 
-      flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
-      txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
+      #flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
+      #txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
+      flat_file =r"C:\\github\\ames\\ames\\data\\roxford5k\\dinov2_query_local.hdf5"
+      txt_file = r"C:\\github\\ames\\ames\\data\\roxford5k\\test_query_100.txt"
 
       metadata, masks, descriptors = verify_flat_format(flat_file)
       image_names = load_image_names(txt_file)
@@ -251,8 +440,23 @@ def main(cfg: DictConfig):
       similarity_matrix = compute_similarity_matrix(model, metadata, masks, descriptors, device)
     
       # Plot results
-      plot_similarity_matrix(similarity_matrix, image_names, 
-                          save_path=r'C:\gitRepo\ames\similarity_matrix_8x8.png')
+      #plot_similarity_matrix(similarity_matrix, image_names, 
+      #                    save_path=r'C:\gitRepo\ames\similarity_matrix_8x8.png')
+
+      # Define paths
+      results_folder = r'C:\github\Results100'
+      image_source_folder = r'C:\github\ames\ames\data\roxford5k\jpg'  # Adjust to your image folder
+    
+      # Process all similarity results
+      process_similarity_results(
+        similarity_matrix=similarity_matrix,
+        image_names=image_names,
+        save_path_folder=results_folder,
+        image_folder_path=image_source_folder,
+        top_k=5  # Show top 5 similar images
+    )
+
+
 #--------------------------------------------------------
 
 if __name__ == '__main__':
