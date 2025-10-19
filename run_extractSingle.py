@@ -26,13 +26,29 @@ repo_root = Path(__file__).resolve().parent
 if str(repo_root) not in sys.path:
     sys.path.insert(0, str(repo_root))    
 
+dataSetTypes = ['roxford5k', 'Ortho']
+
+selected_dataset = dataSetTypes[1]  # Change to 'Ortho' for OrthoPhoto dataset
+
+
 # --- Configuration for single Oxford image extraction ---
-dataset_name = 'roxford5k'
+if 0:
+    dataset_name = 'roxford5k'
+
+    save_path = r'C:\github\ames\ames\data'
+    data_path = r'C:\github\ames\ames\data\roxford5k'  # Root path where jpg folder is
+    split = '_query'  # Using query split since we're processing a query image
+    file_name = 'test_query_100.txt'  # The file we created with just one image
+
+if 1:
+    dataset_name = 'Ortho'
+
+    save_path = r'C:\OrthoPhoto\data'
+    data_path = r'C:\OrthoPhoto\Split'  # Root path where jpg folder is
+    split = '_query'  # Using query split since we're processing a query image
+    file_name = 'test_query.txt'  # The file we created with just one image
+
 backbone = 'dinov2'
-save_path = r'C:\github\ames\ames\data'
-data_path = r'C:\github\ames\ames\data\roxford5k'  # Root path where jpg folder is
-split = '_query'  # Using query split since we're processing a query image
-file_name = 'test_query_100.txt'  # The file we created with just one image
 #desc_type = 'local'  # Only local features
 desc_type = 'local,global'
 top_k = 600  # Extract 600 patches

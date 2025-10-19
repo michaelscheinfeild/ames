@@ -2,6 +2,7 @@ import os
 import sys
 import h5py
 import hydra
+import matplotlib
 import numpy as np
 import torch
 import time  # Add this to your imports
@@ -119,6 +120,176 @@ def create_individual_similarity_plots(similarity_matrix, image_names, save_path
     
     print(f"\n🎉 All {num_images} similarity plots created successfully!")
     print(f"📁 Output folder: {save_path_folder}")
+
+def load_global_descriptors(global_file_path):
+    """Load global descriptors from HDF5 file - they are already normalized"""
+    try:
+        with h5py.File(global_file_path, 'r') as f:
+            global_features = f['features'][:]
+            print(f"✅ Global descriptors loaded!")
+            print(f"📊 Shape: {global_features.shape}")
+            print(f"📋 Data type: {global_features.dtype}")
+            
+            # Global features are typically just the feature vectors (N, 768)
+            if len(global_features.shape) == 2:
+                return global_features
+            elif len(global_features.shape) == 3 and global_features.shape[1] == 1:
+                # If shape is (N, 1, 768), squeeze middle dimension
+                return global_features.squeeze(1)
+            else:
+                print(f"⚠️  Unexpected global feature shape: {global_features.shape}")
+                return global_features
+                
+    except Exception as e:
+        print(f"❌ Error loading global descriptors: {e}")
+        return None
+    
+def compute_similarity_matrix_withglobal(model, metadata, masks, descriptors, global_descriptors, 
+                                       device, lamb=0.5, temp=1.0, save_path_folder=None):
+    """
+    Compute NxN similarity matrix combining global and local scores
+    Global features are ALREADY NORMALIZED during extraction, so we use them directly
+    
+    Args:
+        model: AMES model for local similarity computation
+        metadata: Local feature metadata (N, 600, 5)
+        masks: Local feature masks (N, 600) 
+        descriptors: Local feature descriptors (N, 600, 768)
+        global_descriptors: Global feature descriptors (N, 768) - ALREADY NORMALIZED
+        device: Torch device
+        lamb: Lambda weight between global (lamb) and local (1-lamb) scores
+        temp: Temperature parameter for sigmoid activation on local scores
+        save_path_folder: Output folder (e.g., 'C:\\github\\Results100Global')
+        
+    Returns:
+        combined_matrix: (N, N) numpy array of combined similarity scores
+        global_matrix: (N, N) numpy array of global similarity scores  
+        local_matrix: (N, N) numpy array of local similarity scores (sigmoid)
+    """
+    
+    # Start timing
+    start_time = time.time()
+    
+    # Prepare local features for AMES
+    features, mask_tensor = prepare_ames_input(metadata, descriptors, masks, device)
+    batch_size = features.shape[0]  # N images
+    
+    # Global features are ALREADY NORMALIZED during extraction - use directly
+    global_features = torch.from_numpy(global_descriptors).float().to(device)  # (N, 768)
+    
+    # Verify normalization (optional check)
+    norms = torch.norm(global_features, dim=1)
+    print(f"🔍 Global feature norms: min={norms.min():.3f}, max={norms.max():.3f}, mean={norms.mean():.3f}")
+    if torch.allclose(norms, torch.ones_like(norms), atol=1e-2):
+        print("✅ Confirmed: Global features are already normalized")
+    else:
+        print("⚠️  Warning: Global features may not be normalized, normalizing now...")
+        global_features = torch.nn.functional.normalize(global_features, p=2, dim=1)
+    
+    # Initialize matrices
+    local_similarity_matrix = np.zeros((batch_size, batch_size))
+    global_similarity_matrix = np.zeros((batch_size, batch_size))
+    
+    print(f"🔄 Computing {batch_size}x{batch_size} similarity matrix with global+local combination...")
+    print(f"⚖️  Lambda (global weight): {lamb}")
+    print(f"🌡️  Temperature: {temp}")
+    print(f"📊 Global descriptors shape: {global_features.shape}")
+    
+    with torch.no_grad():
+        total_pairs = batch_size * batch_size
+        completed = 0
+        
+        # Compute global similarity matrix - since features are normalized, cosine = dot product
+        print("🌍 Computing global similarities (using normalized features)...")
+        global_sim_tensor = torch.mm(global_features, global_features.t())  # Cosine similarity
+        
+        # Global similarities are already in [-1, 1], convert to [0, 1] to match local score range
+        global_similarity_matrix = ((global_sim_tensor + 1.0) / 2.0).cpu().numpy()
+        
+        # Compute local similarity matrix using AMES
+        print("🔍 Computing local similarities...")
+        for i in range(batch_size):
+            for j in range(batch_size):
+                try:
+                    # Extract individual images for local comparison
+                    query_features = features[i:i+1]      # (1, 600, 768)
+                    query_mask = mask_tensor[i:i+1]       # (1, 600)
+                    
+                    db_features = features[j:j+1]         # (1, 600, 768)
+                    db_mask = mask_tensor[j:j+1]          # (1, 600)
+                    
+                    # AMES forward call: 1 vs 1 comparison
+                    local_score = model(
+                        src_local=query_features,
+                        src_mask=query_mask,
+                        tgt_local=db_features,
+                        tgt_mask=db_mask
+                    )
+                    
+                    # Extract local similarity score
+                    if isinstance(local_score, torch.Tensor):
+                        local_similarity_matrix[i, j] = local_score.item() if local_score.numel() == 1 else local_score.mean().item()
+                    else:
+                        local_similarity_matrix[i, j] = float(local_score)
+                    
+                    completed += 1
+                    if completed % batch_size == 0:  # Progress every batch_size pairs
+                        print(f"  Progress: {completed}/{total_pairs} pairs completed")
+                        
+                except Exception as pair_error:
+                    print(f"❌ Error at ({i},{j}): {str(pair_error)[:100]}...")
+                    local_similarity_matrix[i, j] = 1.0 if i == j else 0.0
+                    completed += 1
+    
+    # Apply temperature scaling to local scores (sigmoid activation) - SAME AS RERANK
+    print(f"🌡️  Applying temperature scaling (temp={temp})...")
+    local_scores_sigmoid = 1.0 / (1.0 + np.exp(-temp * local_similarity_matrix))
+    
+    # Combine global and local scores using lambda weighting - SAME AS RERANK  
+    print(f"⚖️  Combining scores (lambda={lamb})...")
+    # EXACT SAME FORMULA: s = l * nn_sims[:, :k] + (1 - l) * s[:, :k]
+    combined_similarity_matrix = lamb * global_similarity_matrix + (1 - lamb) * local_scores_sigmoid
+    
+    # End timing
+    end_time = time.time()
+    total_time = end_time - start_time
+    
+    # Print statistics
+    print("✅ Combined similarity matrix computation complete!")
+    print(f"⏱️  Total time: {total_time:.2f} seconds")
+    print(f"📊 Global score range: [{np.min(global_similarity_matrix):.3f}, {np.max(global_similarity_matrix):.3f}]")
+    print(f"📊 Local score range (raw): [{np.min(local_similarity_matrix):.3f}, {np.max(local_similarity_matrix):.3f}]")
+    print(f"📊 Local score range (sigmoid): [{np.min(local_scores_sigmoid):.3f}, {np.max(local_scores_sigmoid):.3f}]")
+    print(f"📊 Combined score range: [{np.min(combined_similarity_matrix):.3f}, {np.max(combined_similarity_matrix):.3f}]")
+    
+    # Save detailed results if path provided
+    if save_path_folder:
+        os.makedirs(save_path_folder, exist_ok=True)
+        
+        # Save individual matrices for analysis
+        np.save(os.path.join(save_path_folder, 'global_similarity_matrix.npy'), global_similarity_matrix)
+        np.save(os.path.join(save_path_folder, 'local_similarity_matrix_raw.npy'), local_similarity_matrix)
+        np.save(os.path.join(save_path_folder, 'local_similarity_matrix_sigmoid.npy'), local_scores_sigmoid)
+        np.save(os.path.join(save_path_folder, 'combined_similarity_matrix.npy'), combined_similarity_matrix)
+        
+        # Save parameters
+        params_path = os.path.join(save_path_folder, 'combination_parameters.txt')
+        with open(params_path, 'w') as f:
+            f.write(f"Global + Local Similarity Combination Parameters\n")
+            f.write(f"=" * 50 + "\n")
+            f.write(f"Lambda (global weight): {lamb}\n")
+            f.write(f"Temperature: {temp}\n")
+            f.write(f"Matrix size: {batch_size}x{batch_size}\n")
+            f.write(f"Computation time: {total_time:.2f} seconds\n")
+            f.write(f"\nScore Statistics:\n")
+            f.write(f"Global range: [{np.min(global_similarity_matrix):.3f}, {np.max(global_similarity_matrix):.3f}]\n")
+            f.write(f"Local raw range: [{np.min(local_similarity_matrix):.3f}, {np.max(local_similarity_matrix):.3f}]\n")
+            f.write(f"Local sigmoid range: [{np.min(local_scores_sigmoid):.3f}, {np.max(local_scores_sigmoid):.3f}]\n")
+            f.write(f"Combined range: [{np.min(combined_similarity_matrix):.3f}, {np.max(combined_similarity_matrix):.3f}]\n")
+        
+        print(f"💾 Matrices and parameters saved to: {save_path_folder}")
+    
+    return combined_similarity_matrix, global_similarity_matrix, local_scores_sigmoid
 
 def compute_similarity_matrix(model, metadata, masks, descriptors, device):
     """Compute NxN similarity matrix using individual pairwise comparisons"""
@@ -293,7 +464,7 @@ def prepare_ames_input(metadata, descriptors, masks, device):
     
     return features, mask_tensor  
 
-
+    
 # Usage function to integrate with your existing code
 def process_similarity_results(similarity_matrix, image_names, save_path_folder, 
                              image_folder_path, top_k=5):
@@ -376,19 +547,48 @@ def verify_flat_format(file_path):
 @hydra.main(config_path="./conf", config_name="test", version_base=None)
 def main(cfg: DictConfig):
       
+
+      plt.ioff()
+      matplotlib.use('Agg')
+
       device = torch.device('cuda:0' if torch.cuda.is_available() and not cfg.cpu else 'cpu')
       print(f"🔧 Using device: {device}")
 
-      #flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
-      #txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
-      flat_file =r"C:\\github\\ames\\ames\\data\\roxford5k\\dinov2_query_local.hdf5"
-      txt_file = r"C:\\github\\ames\\ames\\data\\roxford5k\\test_query_100.txt"
+      # oxford 100 data set extracted use run_extractSingle.py
+      # seems use dino from hub and not same as configured dinov2_ames.pt 
+      # 12 heads vs 2 heads also issu num encoder layer ?
+      if 0:
+        # Load global features
+        global_file = r"C:\\github\\ames\\ames\\data\\roxford5k\\dinov2_query_global.hdf5"
+        
+        
+        # Load flat format features and image names
 
+        #flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
+        #txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
+        flat_file =r"C:\\github\\ames\\ames\\data\\roxford5k\\dinov2_query_local.hdf5"
+        txt_file = r"C:\\github\\ames\\ames\\data\\roxford5k\\test_query_100.txt"
+
+      # orhophoto data set
+      # todo : add all gallery data set
+      if 1:
+            # Load global features
+            global_file = r"C:\\OrthoPhoto\\data\\ortho\\dinov2_query_global.hdf5"
+            
+            
+            # Load flat format features and image names
+
+            #flat_file = r'C:\gitRepo\ames\data\roxford5k\dinov2_query_local.hdf5'
+            #txt_file = r'C:\gitRepo\ames\data\roxford5k\single_image.txt'
+            flat_file =r"C:\\OrthoPhoto\\data\\ortho\\dinov2_query_local.hdf5"
+            txt_file = r"C:\\OrthoPhoto\\data\\ortho\\test_query.txt"
+
+      global_descriptors = load_global_descriptors(global_file)
       metadata, masks, descriptors = verify_flat_format(flat_file)
       image_names = load_image_names(txt_file)
 
       if metadata is None:
-        return
+            return
 
       print("\n📋 SUMMARY OF FLAT FORMAT:")
 
@@ -399,11 +599,11 @@ def main(cfg: DictConfig):
       print("Loaded")
 
       '''
-      📋 SUMMARY OF FLAT FORMAT:
-        Metadata shape: (8, 600, 5)
-        Masks shape: (8, 600)
-        Descriptors shape: (8, 600, 768)
-      
+        📋 SUMMARY OF FLAT FORMAT:
+            Metadata shape: (8, 600, 5)
+            Masks shape: (8, 600)
+            Descriptors shape: (8, 600, 768)
+        
       '''
 
 
@@ -413,7 +613,8 @@ def main(cfg: DictConfig):
 
       # Then in config:
       #'model_path': env_vars.get('MODEL_PATH', 'dinov2_ames.pt')
-      model_path  = r'C:\Users\micha\.cache\torch\hub\checkpoints\dinov2_ames.pt'
+      # model_path  = r'C:\Users\micha\.cache\torch\hub\checkpoints\dinov2_ames.pt'
+      model_path  = r'C:\Users\OPER\.cache\torch\hub\checkpoints\dinov2_ames.pt'    
 
       #load model
       model = AMES(desc_name=cfg.desc_name,
@@ -444,21 +645,69 @@ def main(cfg: DictConfig):
       #                    save_path=r'C:\gitRepo\ames\similarity_matrix_8x8.png')
 
       # Define paths
-      results_folder = r'C:\github\Results100'
-      image_source_folder = r'C:\github\ames\ames\data\roxford5k\jpg'  # Adjust to your image folder
-    
+      if 0:
+        results_folder = r'C:\github\Results100'
+        image_source_folder = r'C:\github\ames\ames\data\roxford5k\jpg'  # Adjust to your image folder
+
+      if 1:
+        results_folder = r'C:\github\Results100Ortho'
+        image_source_folder = r'C:\OrthoPhoto\Split'  # Adjust to your image folder
+
       # Process all similarity results
       process_similarity_results(
         similarity_matrix=similarity_matrix,
         image_names=image_names,
         save_path_folder=results_folder,
         image_folder_path=image_source_folder,
-        top_k=5  # Show top 5 similar images
-    )
+        top_k=5  )# Show top 5 similar images
+      
+
+      # global + local
+      if global_descriptors is not None:
+          # Use combined global+local computation
+          lamb = 0.7  # 70% global, 30% local (experiment with this)
+          temp = 1.0  # Standard temperature
+
+          if 0:
+            save_path_folder=r'C:\github\Results100Global'
+                      
+          if 1:
+            save_path_folder=r'C:\github\Results100GlobalOrtho'
+       
+
+          combined_matrix, global_matrix, local_matrix = compute_similarity_matrix_withglobal(
+              model=model,
+              metadata=metadata,
+              masks=masks,
+              descriptors=descriptors,
+              global_descriptors=global_descriptors,
+              device=device,
+              lamb=lamb,
+              temp=temp,
+              save_path_folder=save_path_folder
+          )
+
+          similarity_matrix = combined_matrix
+          if 0:
+           results_folder = r'C:\github\Results100Global'
+           image_folder_path=r'C:\github\ames\ames\data\roxford5k\jpg'
+          if 1:
+           results_folder = r'C:\github\Results100GlobalOrtho'
+           image_folder_path=r'C:\OrthoPhoto\Split'
+      
+          # Process results (same as before)
+          process_similarity_results(
+              similarity_matrix=similarity_matrix,
+              image_names=image_names,
+              save_path_folder=results_folder,
+              image_folder_path=image_folder_path,
+              top_k=5
+          )
 
 
 #--------------------------------------------------------
-
+# run ams on 100 images and save images query results
+#--------------------------------------------------------
 if __name__ == '__main__':
     
     print(f"Python version: {sys.version}")

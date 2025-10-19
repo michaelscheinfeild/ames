@@ -1,0 +1,42 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug AMES Evaluate",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/evaluate.py",
+            "args": [
+                "descriptors=dinov2",
+                "data_root=data",
+                "model_path=dinov2_ames.pt",
+                "num_workers=0"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "Debug AMES Evaluate (Single Image)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/evaluate.py",
+            "args": [
+                "descriptors=dinov2",
+                "data_root=data",
+                "model_path=dinov2_ames.pt",
+                "num_workers=0",
+                "debug=true"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        }
+    ]
+}
