@@ -74,7 +74,7 @@ def main():
     # Handle ground truth for query sets if applicable
     # micmic
     gnd = None
-    if args.split == '_query' and dataset in ['roxford5k', 'rparis6k', 'instre']:
+    if args.split == '_query' and dataset in ['roxford5k', 'rparis6k', 'instre', 'ortho']:
         gnd_file = os.path.join(args.data_path, f'gnd_{dataset.lower()}.pkl')
         if os.path.exists(gnd_file):
             try:
@@ -90,9 +90,11 @@ def main():
 
     dataset = DataSet(dataset, args.data_path, scale_list, im_paths, imsize=imsize, gnd=gnd, patch_size=ps)
 
+    batch_size = 1
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=1,
+        batch_size=batch_size,
         shuffle=False,
         sampler=BatchSampler(SequentialSampler(dataset), batch_size=1, drop_last=False),
         num_workers=args.num_workers,

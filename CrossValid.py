@@ -1,3 +1,4 @@
+from ast import List
 import os
 import sys
 import h5py
@@ -7,6 +8,10 @@ import numpy as np
 import torch
 import time  # Add this to your imports
 
+from typing import Tuple, List
+import re
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.image as mpimg
@@ -15,6 +20,367 @@ from PIL import Image
 from   src.models.ames import AMES
 from omegaconf import DictConfig
 
+
+def extract_coordinates_from_filename(filename):
+    """
+    Extract x, y coordinates from orthophoto filename
+    Examples: 
+    - imgdb_2240_7700.tif -> (2240, 7700)
+    - imgdb_2240_8050.tif -> (2240, 8050)
+    """
+    try:
+        # Remove extension and extract numbers
+        base_name = os.path.splitext(filename)[0]
+        # Pattern: imgdb_X_Y or similar
+        match = re.search(r'(\d+)_(\d+)', base_name)
+        if match:
+            x, y = int(match.group(1)), int(match.group(2))
+            return x, y
+        else:
+            print(f"⚠️ Could not extract coordinates from: {filename}")
+            return None, None
+    except Exception as e:
+        print(f"❌ Error extracting coordinates from {filename}: {e}")
+        return None, None
+
+def calculate_overlap_percentage(coord1, coord2, tile_width=1120, tile_height=700):
+    """
+    Calculate overlap percentage between two orthophoto tiles
+    
+    Args:
+        coord1, coord2: (x, y) coordinates of tile centers/corners
+        tile_width, tile_height: Size of each tile in pixels
+        
+    Returns:
+        overlap_percentage: Float between 0.0 and 1.0
+    """
+    if coord1[0] is None or coord1[1] is None or coord2[0] is None or coord2[1] is None:
+        return 0.0
+    
+    x1, y1 = coord1
+    x2, y2 = coord2
+    
+    # Calculate tile boundaries (assuming coordinates are top-left corners)
+    tile1_left, tile1_right = x1, x1 + tile_width
+    tile1_top, tile1_bottom = y1, y1 + tile_height
+    
+    tile2_left, tile2_right = x2, x2 + tile_width  
+    tile2_top, tile2_bottom = y2, y2 + tile_height
+    
+    # Calculate intersection
+    intersection_left = max(tile1_left, tile2_left)
+    intersection_right = min(tile1_right, tile2_right)
+    intersection_top = max(tile1_top, tile2_top)
+    intersection_bottom = min(tile1_bottom, tile2_bottom)
+    
+    # Check if there's actual overlap
+    if intersection_left >= intersection_right or intersection_top >= intersection_bottom:
+        return 0.0
+
+
+    # Calculate overlap area
+    intersection_area = (intersection_right - intersection_left) * (intersection_bottom - intersection_top)
+    tile_area = tile_width * tile_height
+    
+    # Overlap percentage relative to tile size
+    overlap_percentage = intersection_area / tile_area
+    
+    return overlap_percentage
+
+
+def find_relevant_images(query_filename, all_filenames, overlap_threshold=0.5, 
+                        tile_width=1120, tile_height=700):
+    """
+    Find images that have significant overlap with query image
+    
+    Args:
+        query_filename: Name of query image
+        all_filenames: List of all image names
+        overlap_threshold: Minimum overlap to consider relevant (default 0.5 = 50%)
+        tile_width, tile_height: Tile dimensions
+        
+    Returns:
+        relevant_indices: List of indices of relevant images
+        overlap_percentages: List of overlap percentages
+    """
+    query_coords = extract_coordinates_from_filename(query_filename)
+    
+    relevant_indices = []
+    overlap_percentages = []
+    
+    for i, filename in enumerate(all_filenames):
+        target_coords = extract_coordinates_from_filename(filename)
+        overlap = calculate_overlap_percentage(query_coords, target_coords, tile_width, tile_height)
+        
+        if overlap >= overlap_threshold:
+            relevant_indices.append(i)
+            overlap_percentages.append(overlap)
+    
+    return relevant_indices, overlap_percentages
+
+def compute_orthophoto_statistics(similarity_matrix, image_names, save_path_folder, 
+                                overlap_threshold=0.5, tile_width=1120, tile_height=700):
+    """
+    Compute comprehensive statistics for orthophoto similarity results
+    
+    Args:
+        similarity_matrix: (N, N) numpy array of similarity scores
+        image_names: List of image filenames
+        save_path_folder: Output folder for saving results
+        overlap_threshold: Minimum overlap to consider images relevant (default 0.5)
+        tile_width, tile_height: Dimensions of orthophoto tiles
+    """
+    
+    print(f"\n📊 COMPUTING ORTHOPHOTO STATISTICS")
+    print(f"📐 Tile dimensions: {tile_width} x {tile_height}")
+    print(f"🎯 Overlap threshold: {overlap_threshold * 100:.1f}%")
+    print(f"🖼️ Number of images: {len(image_names)}")
+    
+    os.makedirs(save_path_folder, exist_ok=True)
+    
+    num_images = len(image_names)
+    results = []
+    correct_matches_histogram = defaultdict(int)
+    all_precisions = []
+    all_recalls = []
+
+        # Process each query image
+    for query_idx in range(num_images):
+        query_name = image_names[query_idx]
+        print(f"🔍 Processing {query_idx+1}/{num_images}: {query_name}")
+        
+        # Find ground truth relevant images (based on overlap)
+        relevant_indices, overlap_percentages = find_relevant_images(
+            query_name, image_names, overlap_threshold, tile_width, tile_height
+        )
+        
+        # Get similarity scores for this query
+        query_similarities = similarity_matrix[query_idx]
+        
+        # Rank all images by similarity (descending order)
+        ranked_indices = np.argsort(-query_similarities)
+        ranked_similarities = query_similarities[ranked_indices]
+        
+        # Evaluate retrieval performance
+        num_relevant = len(relevant_indices)
+        
+        if num_relevant == 0:
+            print(f"  ⚠️ No relevant images found for {query_name}")
+            continue
+        
+        # Calculate precision and recall at different cut-offs
+        precision_at_k = {}
+        recall_at_k = {}
+        
+        found_relevant = []
+
+        # [1, 5, 10, 20, 50] 
+        
+        for k in [1, 3, 5, 8] :
+            if k > num_images:
+                continue
+                
+            top_k_indices = ranked_indices[:k]
+            relevant_found = [idx for idx in top_k_indices if idx in relevant_indices]
+            
+            precision = len(relevant_found) / k
+            recall = len(relevant_found) / num_relevant if num_relevant > 0 else 0.0
+            
+            precision_at_k[k] = precision
+            recall_at_k[k] = recall
+            
+            if k <= 10:  # Store for histogram
+                found_relevant.extend(relevant_found)
+        
+        # Remove duplicates and count correct matches in top-10
+        unique_found = list(set(found_relevant))
+        num_correct_in_top10 = len(unique_found)
+        correct_matches_histogram[num_correct_in_top10] += 1
+        
+        # Calculate Average Precision (AP)
+        average_precision = calculate_average_precision(ranked_indices, relevant_indices)
+        all_precisions.append(average_precision)
+
+                # Store results
+        result = {
+            'query_idx': query_idx,
+            'query_name': query_name,
+            'num_relevant': num_relevant,
+            'relevant_indices': relevant_indices,
+            'overlap_percentages': overlap_percentages,
+            'precision_at_k': precision_at_k,
+            'recall_at_k': recall_at_k,
+            'average_precision': average_precision,
+            'top_10_retrieved': ranked_indices[:10].tolist(),
+            'top_10_similarities': ranked_similarities[:10].tolist(),
+            'correct_in_top10': num_correct_in_top10
+        }
+        results.append(result)
+        
+        # Print summary for this query
+        print(f"  📊 Relevant images: {num_relevant}")
+        print(f"  🎯 P@5: {precision_at_k.get(5, 0):.3f}, R@5: {recall_at_k.get(5, 0):.3f}")
+        print(f"  🎯 P@8: {precision_at_k.get(8, 0):.3f}, R@8: {recall_at_k.get(8, 0):.3f}")
+        print(f"  📈 AP: {average_precision:.3f}")
+
+    # Calculate overall statistics
+    mean_ap = np.mean(all_precisions) if all_precisions else 0.0
+    
+    # Calculate mean precision and recall at k
+    mean_precision_at_k = {}
+    mean_recall_at_k = {}
+    
+    #[1, 5, 10, 20, 50]
+    for k in [1, 3, 5, 8]:
+        precisions_k = [r['precision_at_k'].get(k, 0) for r in results if k in r['precision_at_k']]
+        recalls_k = [r['recall_at_k'].get(k, 0) for r in results if k in r['recall_at_k']]
+        
+        mean_precision_at_k[k] = np.mean(precisions_k) if precisions_k else 0.0
+        mean_recall_at_k[k] = np.mean(recalls_k) if recalls_k else 0.0
+    
+    # Print overall results
+    print(f"\n📈 OVERALL RESULTS:")
+    print(f"📊 Mean Average Precision (mAP): {mean_ap:.3f}")
+    print(f"📊 Mean Precision@5: {mean_precision_at_k.get(5, 0):.3f}")
+    print(f"📊 Mean Precision@8: {mean_precision_at_k.get(8, 0):.3f}")
+    print(f"📊 Mean Recall@5: {mean_recall_at_k.get(5, 0):.3f}")
+    print(f"📊 Mean Recall@8: {mean_recall_at_k.get(8, 0):.3f}")
+
+
+    # Create visualizations
+    create_statistics_plots(results, correct_matches_histogram, save_path_folder, 
+                           mean_ap, mean_precision_at_k, mean_recall_at_k)
+    
+    # Save detailed results
+    save_detailed_results(results, save_path_folder, mean_ap, mean_precision_at_k, mean_recall_at_k)
+    
+    return results, mean_ap, mean_precision_at_k, mean_recall_at_k
+
+def calculate_average_precision(ranked_indices, relevant_indices):
+    """Calculate Average Precision for a single query"""
+    if len(relevant_indices) == 0:
+        return 0.0
+    
+    relevant_set = set(relevant_indices)
+    precision_sum = 0.0
+    num_relevant_found = 0
+    
+    for i, idx in enumerate(ranked_indices):
+        if idx in relevant_set:
+            num_relevant_found += 1
+            precision_at_i = num_relevant_found / (i + 1)
+            precision_sum += precision_at_i
+    
+    return precision_sum / len(relevant_indices)
+
+
+def create_statistics_plots(results, correct_matches_histogram, save_path_folder,
+                          mean_ap, mean_precision_at_k, mean_recall_at_k):
+    """Create visualization plots for the statistics"""
+    
+    # 1. Histogram of correct matches in top-10
+    plt.figure(figsize=(12, 8))
+    
+    plt.subplot(2, 2, 1)
+    bins = list(range(max(correct_matches_histogram.keys()) + 2))
+    counts = [correct_matches_histogram[i] for i in bins[:-1]]
+    
+    plt.bar(bins[:-1], counts, alpha=0.7, color='skyblue', edgecolor='black')
+    plt.xlabel('Number of Correct Matches in Top-10')
+    plt.ylabel('Number of Queries')
+    plt.title('Distribution of Correct Matches in Top-10')
+    plt.grid(True, alpha=0.3)
+    
+    # Add value labels on bars
+    for i, count in enumerate(counts):
+        if count > 0:
+            plt.text(i, count + 0.1, str(count), ha='center', va='bottom')
+    
+    # 2. Precision@K plot
+    plt.subplot(2, 2, 2)
+    k_values = sorted(mean_precision_at_k.keys())
+    precision_values = [mean_precision_at_k[k] for k in k_values]
+    
+    plt.plot(k_values, precision_values, 'o-', linewidth=2, markersize=8, color='green')
+    plt.xlabel('K (Top-K Retrieved)')
+    plt.ylabel('Mean Precision@K')
+    plt.title('Mean Precision at Different K Values')
+    plt.grid(True, alpha=0.3)
+    plt.ylim(0, 1.0)
+    
+    # 3. Recall@K plot
+    plt.subplot(2, 2, 3)
+    recall_values = [mean_recall_at_k[k] for k in k_values]
+    
+    plt.plot(k_values, recall_values, 'o-', linewidth=2, markersize=8, color='orange')
+    plt.xlabel('K (Top-K Retrieved)')
+    plt.ylabel('Mean Recall@K')
+    plt.title('Mean Recall at Different K Values')
+    plt.grid(True, alpha=0.3)
+    plt.ylim(0, 1.0)
+    
+    # 4. Average Precision distribution
+    plt.subplot(2, 2, 4)
+    ap_values = [r['average_precision'] for r in results]
+    
+    plt.hist(ap_values, bins=20, alpha=0.7, color='purple', edgecolor='black')
+    plt.axvline(mean_ap, color='red', linestyle='--', linewidth=2, label=f'Mean AP: {mean_ap:.3f}')
+    plt.xlabel('Average Precision')
+    plt.ylabel('Number of Queries')
+    plt.title('Distribution of Average Precision Scores')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    # Save the plot
+    plot_path = os.path.join(save_path_folder, 'orthophoto_statistics.png')
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    print(f"✅ Statistics plots saved: {plot_path}")
+
+def save_detailed_results(results, save_path_folder, mean_ap, mean_precision_at_k, mean_recall_at_k):
+    """Save detailed results to text files"""
+    
+    # Save summary statistics
+    summary_path = os.path.join(save_path_folder, 'orthophoto_summary.txt')
+    with open(summary_path, 'w') as f:
+        f.write("ORTHOPHOTO SIMILARITY ANALYSIS SUMMARY\n")
+        f.write("=" * 50 + "\n\n")
+        f.write(f"Total queries processed: {len(results)}\n")
+        f.write(f"Mean Average Precision (mAP): {mean_ap:.4f}\n\n")
+        
+        f.write("Mean Precision@K:\n")
+        for k in sorted(mean_precision_at_k.keys()):
+            f.write(f"  P@{k}: {mean_precision_at_k[k]:.4f}\n")
+        
+        f.write("\nMean Recall@K:\n")
+        for k in sorted(mean_recall_at_k.keys()):
+            f.write(f"  R@{k}: {mean_recall_at_k[k]:.4f}\n")
+    
+    # Save detailed per-query results
+    detailed_path = os.path.join(save_path_folder, 'orthophoto_detailed_results.txt')
+    with open(detailed_path, 'w') as f:
+        f.write("DETAILED PER-QUERY RESULTS\n")
+        f.write("=" * 80 + "\n\n")
+        
+        for result in results:
+            f.write(f"Query {result['query_idx']}: {result['query_name']}\n")
+            f.write(f"  Relevant images: {result['num_relevant']}\n")
+            f.write(f"  Average Precision: {result['average_precision']:.4f}\n")
+            f.write(f"  Correct in top-10: {result['correct_in_top10']}\n")
+            
+            f.write(f"  Precision@K: ")
+            for k in sorted(result['precision_at_k'].keys()):
+                f.write(f"P@{k}={result['precision_at_k'][k]:.3f} ")
+            f.write(f"\n")
+            
+            f.write(f"  Top-10 retrieved: {result['top_10_retrieved']}\n")
+            f.write(f"  Relevant indices: {result['relevant_indices']}\n")
+            f.write("-" * 80 + "\n")
+    
+    print(f"✅ Detailed results saved: {summary_path}, {detailed_path}")
 
 def create_individual_similarity_plots(similarity_matrix, image_names, save_path_folder, 
                                      image_folder_path, top_k=5):
@@ -540,7 +906,16 @@ def verify_flat_format(file_path):
     return metadata, masks, descriptors
 
 
-
+def retrieve_images(similarities,  query_idx: int, top_k: int = 100, method: str = None) -> Tuple[List[int], np.ndarray]:
+        
+        # Sort by similarity (descending)
+        #TODO ADD SIGMOID AND GLOBAL WEIGHTING
+        ranked_indices = np.argsort(-similarities)
+        #ranked_indices = np.argsort(similarities)# NOW IS POSITIVE
+        ranked_similarities = similarities[ranked_indices]
+        
+        return ranked_indices[:top_k].tolist(), ranked_similarities[:top_k]
+    
  #--------------------
  # to do use global_file too
  # todo use data loader batches 
@@ -587,6 +962,8 @@ def main(cfg: DictConfig):
       metadata, masks, descriptors = verify_flat_format(flat_file)
       image_names = load_image_names(txt_file)
 
+      results_folder = r"C:\\OrthoPhoto\\data\\ortho\\results"
+
       if metadata is None:
             return
 
@@ -613,8 +990,8 @@ def main(cfg: DictConfig):
 
       # Then in config:
       #'model_path': env_vars.get('MODEL_PATH', 'dinov2_ames.pt')
-      # model_path  = r'C:\Users\micha\.cache\torch\hub\checkpoints\dinov2_ames.pt'
-      model_path  = r'C:\Users\OPER\.cache\torch\hub\checkpoints\dinov2_ames.pt'    
+      model_path  = r'C:\Users\micha\.cache\torch\hub\checkpoints\dinov2_ames.pt'
+      #model_path  = r'C:\Users\OPER\.cache\torch\hub\checkpoints\dinov2_ames.pt'    
 
       #load model
       model = AMES(desc_name=cfg.desc_name,
@@ -639,6 +1016,47 @@ def main(cfg: DictConfig):
       #     *list(map(lambda x: x.to(device, non_blocking=True), q_f)),
       #     *list(map(lambda x: x.to(device, non_blocking=True), db_f)))
       similarity_matrix = compute_similarity_matrix(model, metadata, masks, descriptors, device)
+
+      # Compute orthophoto-specific statistics
+
+      '''
+        🎯 What This Function Does:
+        1. Overlap Detection:
+        Extracts coordinates from filenames like imgdb_2240_7700.tif
+        Calculates spatial overlap between tiles
+        Determines relevance based on 50% overlap threshold
+
+        2. Retrieval Evaluation:
+        Precision@K: How many of top-K are relevant
+        Recall@K: How many relevant images found in top-K
+        Average Precision (AP): Area under precision-recall curve
+        Mean AP (mAP): Average AP across all queries
+        
+        3. Statistics Generated:
+        Histogram: Distribution of correct matches in top-10
+        Performance curves: Precision@K and Recall@K plots
+        AP distribution: Shows query difficulty variation
+        Detailed results: Per-query breakdown
+      ''' 
+
+
+      print(f"\n🔍 COMPUTING ORTHOPHOTO OVERLAP STATISTICS...")
+      # Define output folder for statistics
+      stats_folder = os.path.join(results_folder, 'statistics')
+      # Run comprehensive statistics analysis
+      query_results, mean_ap, mean_precision_at_k, mean_recall_at_k = compute_orthophoto_statistics(
+        similarity_matrix=similarity_matrix,
+        image_names=image_names,
+        save_path_folder=stats_folder,
+        overlap_threshold=0.5,  # 50% overlap threshold
+        tile_width=1120,
+        tile_height=700
+      )
+    
+      print(f"\n📊 FINAL ORTHOPHOTO STATISTICS:")
+      print(f"📈 Mean Average Precision (mAP): {mean_ap:.3f}")
+      print(f"🎯 Mean Precision@5: {mean_precision_at_k.get(5, 0):.3f}")
+      print(f"🎯 Mean Precision@8: {mean_precision_at_k.get(8, 0):.3f}")      
     
       # Plot results
       #plot_similarity_matrix(similarity_matrix, image_names, 

@@ -407,3 +407,17 @@ Update your configuration:
 Use the corrected TestDataset above
 
 This should resolve all the format mismatches and get your evaluation working properly!
+
+
+# Example gnd structure from gnd_roxford5k.pkl
+gnd = [
+    {
+        'imname': 'all_souls_000013.jpg',     # Query image name
+        'bbx': [10, 20, 500, 400],            # Bounding box [x1, y1, x2, y2]
+        'ok': [234, 567, 891, 1023, ...],     # Relevant images (positive matches)
+        'junk': [45, 123, 456, ...],          # Junk images (ignore in evaluation)
+        'easy': [234, 567, ...],              # Easy positive matches
+        'hard': [891, 1023, ...],             # Hard positive matches
+    },
+    # ... more query entries
+]
